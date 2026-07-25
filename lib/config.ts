@@ -1,10 +1,6 @@
 /**
- * Client-safe feature flags (inlined from NEXT_PUBLIC_* at build time).
- * These are booleans/toggles only — never secrets.
+ * Client-safe constants (inlined at build time). Never secrets.
  */
-
-/** When true, the swipe app loads jobs from the SQL Server feed (/api/jobs). */
-export const USE_REAL_JOBS = process.env.NEXT_PUBLIC_USE_REAL_JOBS === "true";
 
 /**
  * How many top jobs the "Score with AI" button scores at once.

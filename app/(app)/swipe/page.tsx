@@ -24,7 +24,6 @@ export default function SwipePage() {
     metrics,
     hydrated,
     error,
-    source,
     scoring,
     filtering,
     activeFilterCount,
@@ -103,7 +102,7 @@ export default function SwipePage() {
           </div>
 
           {/* Manual, cost-controlled AI scoring of the first 10 real jobs. */}
-          {hydrated && source === "sql-server" && jobs.length > 0 && (
+          {hydrated && jobs.length > 0 && (
             <div className="mt-3">
               <Button
                 onClick={handleScoreTop}
@@ -123,10 +122,10 @@ export default function SwipePage() {
           )}
         </div>
 
-        {/* Live-feed error → we fell back to mock jobs. */}
+        {/* Jobs feed failed to load. */}
         {error && (
           <div className="mb-4 shrink-0 rounded-lg border-2 border-[var(--caution)]/40 bg-[var(--caution)]/10 px-4 py-2.5 text-xs text-[var(--caution)]">
-            Couldn&apos;t load live jobs ({error}). Showing sample jobs instead.
+            Couldn&apos;t load jobs ({error}). Try again in a moment.
           </div>
         )}
 

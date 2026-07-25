@@ -17,18 +17,15 @@ import {
   useRef,
   useState,
 } from "react";
-import { MOCK_SWIPE_JOBS } from "@/lib/mockData/swipeJobs";
 import { DEFAULT_SWIPE_PROFILE } from "@/lib/swipe/defaultProfile";
 import { RECOMMEND_THRESHOLD } from "@/lib/careerOps/scoreUtils";
 import { swipeJobScore } from "@/lib/swipe/jobScore";
-import { SCORE_TOP_N, USE_REAL_JOBS } from "@/lib/config";
+import { SCORE_TOP_N } from "@/lib/config";
 import { jobListingsToSwipeJobs } from "@/lib/jobs/jobListingToSwipeJob";
 import type { ResumeProfile } from "@/lib/careerOps/types";
 import type { CareerOpsAiScore } from "@/lib/careerOps/aiScore";
 import type { JobListing } from "@/types/jobListing";
 import type { SwipeDecision, SwipeJob, SwipeJobStatus } from "@/types/swipe";
-
-type JobSource = "mock" | "sql-server";
 
 /** Active job filters — drive the SQL WHERE clauses via /api/jobs (server-side). */
 export interface JobFilterState {
@@ -60,19 +57,15 @@ function buildJobsUrl(filters: JobFilterState, limit = 100): string {
 }
 
 /**
- * Fetch jobs from the SQL Server feed with optional filters. Falls back to the
- * mock dataset when real jobs are disabled or the request fails. An *empty*
- * filtered result is returned as-is (so the UI can say "no jobs matched"),
- * never replaced by mock.
+ * Fetch jobs from the SQL Server feed with optional filters. On failure the
+ * deck is left empty and `error` carries the reason — there is no fallback
+ * data source. An *empty* filtered result is returned as-is (so the UI can
+ * say "no jobs matched").
  */
 async function fetchJobs(filters: JobFilterState = {}): Promise<{
   jobs: SwipeJob[];
-  source: JobSource;
   error: string | null;
 }> {
-  if (!USE_REAL_JOBS) {
-    return { jobs: MOCK_SWIPE_JOBS, source: "mock", error: null };
-  }
   try {
     const res = await fetch(buildJobsUrl(filters));
     const data = (await res.json()) as {
@@ -83,14 +76,10 @@ async function fetchJobs(filters: JobFilterState = {}): Promise<{
     if (!res.ok || !data.ok || !Array.isArray(data.jobs)) {
       throw new Error(data.error || `Request failed (${res.status})`);
     }
-    return {
-      jobs: jobListingsToSwipeJobs(data.jobs),
-      source: "sql-server",
-      error: null,
-    };
+    return { jobs: jobListingsToSwipeJobs(data.jobs), error: null };
   } catch (err) {
     const message = err instanceof Error ? err.message : "Failed to load jobs";
-    return { jobs: MOCK_SWIPE_JOBS, source: "mock", error: message };
+    return { jobs: [], error: message };
   }
 }
 
@@ -125,9 +114,7 @@ interface SwipeStore {
   profile: ResumeProfile;
   notes: Record<string, string>;
   hydrated: boolean;
-  /** Where the current jobs came from. */
-  source: JobSource;
-  /** Non-null when the real-jobs feed failed and we fell back to mock. */
+  /** Non-null when the jobs feed failed to load. */
   error: string | null;
   /** True while the manual "Score top 10" batch is running. */
   scoring: boolean;
@@ -190,11 +177,10 @@ export function SwipeStoreProvider({
   /** Logged-in email — seeded onto the profile so uploads/scoring use it. */
   sessionEmail?: string;
 }) {
-  const [jobs, setJobs] = useState<SwipeJob[]>(MOCK_SWIPE_JOBS);
+  const [jobs, setJobs] = useState<SwipeJob[]>([]);
   const [notes, setNotesState] = useState<Record<string, string>>({});
   const [profile, setProfile] = useState<ResumeProfile>(DEFAULT_SWIPE_PROFILE);
   const [hydrated, setHydrated] = useState(false);
-  const [source, setSource] = useState<JobSource>("mock");
   const [error, setError] = useState<string | null>(null);
   const [scoring, setScoring] = useState(false);
   const [jobFilters, setJobFilters] = useState<JobFilterState>({});
@@ -230,7 +216,6 @@ export function SwipeStoreProvider({
     fetchJobs().then((res) => {
       if (cancelled) return;
       setJobs(withStatuses(res.jobs, statuses));
-      setSource(res.source);
       setError(res.error);
       setHydrated(true);
     });
@@ -261,11 +246,11 @@ export function SwipeStoreProvider({
   }, []);
 
   // Persist "job seen" for the logged-in user (fire-and-forget; never blocks the
-  // swipe). Deduped per (job, action) so React double-fires don't re-POST. Only
-  // for real jobs — mock ids aren't real job_references. jobId === job_reference.
+  // swipe). Deduped per (job, action) so React double-fires don't re-POST.
+  // jobId === job_reference.
   const markedSeenRef = useRef<Set<string>>(new Set());
   const markSeen = useCallback((jobId: string, action: string) => {
-    if (!USE_REAL_JOBS || !jobId) return;
+    if (!jobId) return;
     const key = `${jobId}:${action}`;
     if (markedSeenRef.current.has(key)) return;
     markedSeenRef.current.add(key);
@@ -380,7 +365,6 @@ export function SwipeStoreProvider({
       try {
         const res = await fetchJobs(active);
         setJobs(res.jobs);
-        setSource(res.source);
         setError(res.error);
         return { ok: true, count: res.jobs.length, error: res.error };
       } finally {
@@ -397,7 +381,6 @@ export function SwipeStoreProvider({
     fetchJobs()
       .then((res) => {
         setJobs(res.jobs);
-        setSource(res.source);
         setError(res.error);
       })
       .finally(() => setFiltering(false));
@@ -412,7 +395,6 @@ export function SwipeStoreProvider({
     fetchJobs()
       .then((res) => {
         setJobs(res.jobs);
-        setSource(res.source);
         setError(res.error);
       })
       .finally(() => setFiltering(false));
@@ -452,7 +434,6 @@ export function SwipeStoreProvider({
     profile,
     notes,
     hydrated,
-    source,
     error,
     scoring,
     jobFilters,
