@@ -1,33 +1,21 @@
 /**
  * POST /api/scoring/score-batch
  *
- * Two modes (branch on `email`):
- *  - Real jobs:  { email, jobIds[], profile?, forceRefresh?, limit? }
- *      → scores the user's latest resume vs each job (DB-cached, cap 10).
- *      Returns { ok, count, cachedCount, scoredCount, model, results } sorted desc.
- *  - Mock (legacy): { jobIds[], profile?, forceRefresh? }
- *      → the original mock-dataset scoring used by lib/scoring/scoresClient.
+ * { email, jobIds[], profile?, forceRefresh?, limit? }
+ *   → scores the user's latest resume vs each job (DB-cached, cap 10).
+ *   Returns { ok, count, cachedCount, scoredCount, model, results } sorted desc.
  *
  * Concurrency-limited so we never fan out a large burst of model calls.
  */
 
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
-import { evaluateJob } from "@/lib/scoring/scoreJob";
-import {
-  MAX_BATCH_SIZE,
-  SCORING_CONCURRENCY,
-  resolveCandidateProfile,
-  resolveJob,
-} from "@/lib/scoring/resolve";
-import { getProviderMode } from "@/lib/scoring/providerRegistry";
 import {
   NoResumeError,
   scoreTopForEmail,
   type ScoreOutcome,
 } from "@/lib/careerOps/scoringService";
 import type { ResumeProfile } from "@/lib/careerOps/types";
-import type { ScoreJobOutcome } from "@/lib/scoring/types";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -38,26 +26,6 @@ interface Body {
   profile?: ResumeProfile;
   forceRefresh?: boolean;
   limit?: number;
-}
-
-/** Run `worker` over `items` with a fixed concurrency, preserving order. */
-async function mapWithConcurrency<T, R>(
-  items: T[],
-  concurrency: number,
-  worker: (item: T) => Promise<R>,
-): Promise<R[]> {
-  const results: R[] = new Array(items.length);
-  let next = 0;
-  async function run() {
-    while (next < items.length) {
-      const i = next++;
-      results[i] = await worker(items[i]);
-    }
-  }
-  await Promise.all(
-    Array.from({ length: Math.min(concurrency, items.length) }, run),
-  );
-  return results;
 }
 
 export async function POST(req: Request) {
@@ -121,30 +89,8 @@ export async function POST(req: Request) {
     }
   }
 
-  // --- Legacy mock flow (used by scoresClient in mock mode) -------------
-  const jobIds = [...new Set(body.jobIds)].slice(0, MAX_BATCH_SIZE);
-  const profile = resolveCandidateProfile(body.profile);
-
-  const results = await mapWithConcurrency<string, ScoreJobOutcome>(
-    jobIds,
-    SCORING_CONCURRENCY,
-    async (jobId): Promise<ScoreJobOutcome> => {
-      const job = resolveJob(jobId);
-      if (!job) return { jobId, status: "error", error: "Unknown job" };
-      try {
-        const { result, cached } = await evaluateJob({
-          job,
-          profile,
-          forceRefresh: body.forceRefresh,
-        });
-        return { jobId, status: cached ? "cached" : "scored", score: result };
-      } catch (err) {
-        const message = err instanceof Error ? err.message : "Scoring failed";
-        console.error(`[score-batch] ${jobId}: ${message}`);
-        return { jobId, status: "error", error: message };
-      }
-    },
+  return NextResponse.json(
+    { ok: false, error: "Sign in to score jobs." },
+    { status: 401 },
   );
-
-  return NextResponse.json({ ok: true, results, mode: getProviderMode() });
 }

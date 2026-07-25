@@ -1,25 +1,18 @@
 /**
  * POST /api/scoring/score-job
- * Body: { jobId: string, profile?: ResumeProfile, job?: SwipeJob, forceRefresh?: boolean }
- * Returns: { ok: true, score: JobEvaluationResult, cached, mode } | { ok: false, error }
- *
+ * Body: { jobId: string, profile?: ResumeProfile, forceRefresh?: boolean }
+ * Scores the signed-in user's latest resume against one job (DB-cached).
  * All scoring happens server-side. The API key is never exposed to the client.
  */
 
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
-import { evaluateJob } from "@/lib/scoring/scoreJob";
-import { resolveCandidateProfile, resolveJob } from "@/lib/scoring/resolve";
-import {
-  getProviderInfo,
-  getProviderMode,
-} from "@/lib/scoring/providerRegistry";
+import { getProviderInfo } from "@/lib/scoring/providerRegistry";
 import {
   NoResumeError,
   scoreOneForEmail,
 } from "@/lib/careerOps/scoringService";
 import type { ResumeProfile } from "@/lib/careerOps/types";
-import type { SwipeJob } from "@/types/swipe";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -28,7 +21,6 @@ interface Body {
   email?: string;
   jobId?: string;
   profile?: ResumeProfile;
-  job?: SwipeJob;
   forceRefresh?: boolean;
 }
 
@@ -88,33 +80,8 @@ export async function POST(req: Request) {
     }
   }
 
-  // --- Legacy mock flow -------------------------------------------------
-  const job = resolveJob(body.jobId, body.job);
-  if (!job) {
-    return NextResponse.json(
-      { ok: false, error: `Unknown job: ${body.jobId}` },
-      { status: 404 },
-    );
-  }
-
-  const profile = resolveCandidateProfile(body.profile);
-
-  try {
-    const { result, cached } = await evaluateJob({
-      job,
-      profile,
-      forceRefresh: body.forceRefresh,
-    });
-    return NextResponse.json({
-      ok: true,
-      score: result,
-      cached,
-      mode: getProviderMode(),
-    });
-  } catch (err) {
-    // Log id + message only — never the full profile/JD or any key.
-    const message = err instanceof Error ? err.message : "Scoring failed";
-    console.error(`[score-job] ${body.jobId}: ${message}`);
-    return NextResponse.json({ ok: false, error: message }, { status: 500 });
-  }
+  return NextResponse.json(
+    { ok: false, error: "Sign in to score jobs." },
+    { status: 401 },
+  );
 }

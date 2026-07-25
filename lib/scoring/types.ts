@@ -166,10 +166,3 @@ export interface LlmProvider {
 
 /** Per-job result of a (possibly cached) scoring request. */
 export type ScoreStatus = "scored" | "cached" | "error";
-
-export interface ScoreJobOutcome {
-  jobId: string;
-  status: ScoreStatus;
-  score?: JobEvaluationResult;
-  error?: string;
-}
