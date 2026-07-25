@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
 import {
   AlertTriangle,
   Bookmark,
@@ -9,8 +8,6 @@ import {
   FileText,
   Lightbulb,
   ListChecks,
-  Loader2,
-  RotateCw,
   Send,
   ShieldCheck,
   Sparkles,
@@ -24,18 +21,9 @@ import { CompanyLogo } from "./CompanyLogo";
 import { ScoreMeter } from "./ScoreMeter";
 import { TagPill } from "./TagPill";
 import { ScoreBreakdown } from "@/components/jobs/ScoreBreakdown";
-import { evaluateJobForUser } from "@/lib/careerOps/swipeAdapter";
 import { getNextAction } from "@/lib/careerOps/scoreUtils";
-import { useSwipeStore } from "@/lib/swipe/swipeStore";
-import { swipeJobScore } from "@/lib/swipe/jobScore";
-import { useScores } from "@/lib/scoring/scoresClient";
 import { SWIPE_REMOTE_LABELS, SWIPE_ROLE_LABELS } from "@/types/swipe";
 import type { SwipeJob } from "@/types/swipe";
-import type {
-  CareerOpsBlocks,
-  JobEvaluationResult,
-  ScoreDimensions,
-} from "@/lib/scoring/types";
 import type { CareerOpsScoreBreakdown } from "@/lib/careerOps/types";
 
 interface JobDetailModalProps {
@@ -49,48 +37,40 @@ interface JobDetailModalProps {
 }
 
 const REC_LABELS: Record<string, string> = {
-  apply_now: "Apply now",
-  save_and_review: "Save & review",
+  apply_immediately: "Apply now",
+  worth_applying: "Worth applying",
   maybe: "Maybe",
-  skip: "Skip",
+  against: "Skip",
 };
 
-const DIMENSION_LABELS: { key: keyof ScoreDimensions; label: string }[] = [
-  { key: "cvMatch", label: "CV match" },
-  { key: "roleAlignment", label: "Role alignment" },
-  { key: "seniorityFit", label: "Seniority fit" },
-  { key: "skillsFit", label: "Skills fit" },
-  { key: "domainFit", label: "Domain fit" },
-  { key: "compensationFit", label: "Compensation" },
-  { key: "locationFit", label: "Location / work mode" },
-  { key: "cultureFit", label: "Cultural signals" },
-  { key: "redFlags", label: "Red flags (higher = fewer)" },
-];
+const AI_DIMENSION_LABELS: Record<string, string> = {
+  skillMatch: "Skill match",
+  experienceLevel: "Experience level",
+  roleAlignment: "Role alignment",
+  locationFit: "Location fit",
+  growthPotential: "Growth potential",
+  companyLegitimacy: "Company legitimacy",
+  redFlags: "Red flags (higher = fewer)",
+};
 
-/** Map AI dimensions into the shared ScoreBreakdown shape. */
+/** Map the AI score's dimension map into the shared ScoreBreakdown shape. */
 function dimensionsToBreakdown(
-  dims: ScoreDimensions,
+  dimensions: Record<string, number>,
   global: number,
 ): CareerOpsScoreBreakdown {
-  const items = DIMENSION_LABELS.filter(
-    ({ key }) => dims[key] !== null && dims[key] !== undefined,
-  ).map(({ key, label }) => ({
-    key,
-    label,
-    score: dims[key] as number,
-    weight: 1 / DIMENSION_LABELS.length,
-  }));
-  return { global, items };
+  const entries = Object.entries(dimensions).filter(
+    ([, value]) => typeof value === "number",
+  );
+  return {
+    global,
+    items: entries.map(([key, score]) => ({
+      key,
+      label: AI_DIMENSION_LABELS[key] ?? key,
+      score,
+      weight: 1 / entries.length,
+    })),
+  };
 }
-
-const BLOCK_ORDER: { key: keyof CareerOpsBlocks; title: string }[] = [
-  { key: "roleSummary", title: "A) Role Summary" },
-  { key: "cvMatch", title: "B) Match With Candidate" },
-  { key: "levelStrategy", title: "C) Level & Strategy" },
-  { key: "compAndDemand", title: "D) Compensation & Demand" },
-  { key: "customizationPlan", title: "E) Customization Plan" },
-  { key: "interviewPlan", title: "F) Interview Plan" },
-];
 
 function Section({
   icon: Icon,
@@ -121,30 +101,13 @@ export function JobDetailModal({
   onInterested,
   onReviewApply,
 }: JobDetailModalProps) {
-  const { profile } = useSwipeStore();
-  const { getEntry, ensureScored, rescore } = useScores();
+  if (!job) return null;
 
-  // Ensure this job gets scored when the panel opens.
-  useEffect(() => {
-    if (open && job) ensureScored([job.id]);
-  }, [open, job, ensureScored]);
-
-  // Fallback breakdown (deterministic mock) until the AI score arrives.
-  const fallback = useMemo(
-    () => (job ? evaluateJobForUser(job, profile) : null),
-    [job, profile],
-  );
-
-  if (!job || !fallback) return null;
-
-  const entry = getEntry(job.id);
-  const result: JobEvaluationResult | undefined = entry?.result;
-  const reportBlocks = result?.careerOpsBlocks;
-  const scoring = entry?.status === "scoring";
-  const score = result?.score ?? swipeJobScore(job);
-  const breakdown = result
-    ? dimensionsToBreakdown(result.dimensions, score)
-    : fallback.breakdown;
+  const ai = job.careerOpsScore;
+  const breakdown =
+    ai?.dimensions && Object.keys(ai.dimensions).length > 0
+      ? dimensionsToBreakdown(ai.dimensions, ai.score)
+      : null;
 
   return (
     <Dialog open={open} onClose={onClose} side="right">
@@ -168,173 +131,89 @@ export function JobDetailModal({
 
       {/* Score */}
       <div className="mt-5 rounded-2xl border border-border bg-surface p-4">
-        <div className="mb-2 flex items-center justify-between">
-          <span className="flex items-center gap-1.5 text-xs font-medium">
-            {scoring ? (
-              <span className="flex items-center gap-1 text-muted-foreground">
-                <Loader2 className="size-3 animate-spin" /> AI scoring…
-              </span>
-            ) : result ? (
-              <span className="flex items-center gap-1 text-accent">
-                <Sparkles className="size-3" /> AI scored · {result.model}
-              </span>
-            ) : entry?.status === "error" ? (
-              <span className="text-[var(--danger)]">Scoring failed</span>
-            ) : null}
-          </span>
-          <button
-            onClick={() => rescore(job.id)}
-            className="flex items-center gap-1 text-xs font-medium text-muted hover:text-foreground"
-          >
-            <RotateCw className="size-3" /> Re-score
-          </button>
-        </div>
-        <ScoreMeter score={score} />
-        <div className="mt-3 flex flex-wrap items-center gap-1.5">
-          {result && (
-            <Badge variant="primary">{REC_LABELS[result.recommendation]}</Badge>
-          )}
-          {result && (
-            <Badge variant="outline">Confidence: {result.confidence}</Badge>
-          )}
-        </div>
-        <p className="mt-3 text-sm text-muted">
-          {result?.cardSummary.headline ?? job.matchSummary}
-        </p>
+        {ai ? (
+          <>
+            <div className="mb-2 flex items-center gap-1.5 text-xs font-medium text-accent">
+              <Sparkles className="size-3" /> AI scored
+            </div>
+            <ScoreMeter score={ai.score} />
+            <div className="mt-3 flex flex-wrap items-center gap-1.5">
+              <Badge variant="primary">
+                {REC_LABELS[ai.recommendation] ?? ai.recommendation}
+              </Badge>
+              <Badge variant="outline">{ai.label}</Badge>
+            </div>
+            {ai.summary && (
+              <p className="mt-3 text-sm text-muted">{ai.summary}</p>
+            )}
+          </>
+        ) : (
+          <div className="py-2 text-center">
+            <p className="text-sm font-medium">Not scored yet</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Use “Score top jobs with AI” on the swipe screen to compare this
+              job against your uploaded resume.
+            </p>
+          </div>
+        )}
       </div>
 
       <div className="mt-6 space-y-5">
-        <Section icon={Sparkles} title="Score breakdown (Career-Ops)">
-          <ScoreBreakdown breakdown={breakdown} />
-        </Section>
-
-        <Section icon={Lightbulb} title="Suggested action">
-          <p className="text-sm text-muted">{getNextAction(score)}</p>
-        </Section>
-
-        <Section icon={ThumbsUp} title="Why this role matches you">
-          <ul className="space-y-2">
-            {(result?.strengths ?? job.strengths).map((s) => (
-              <li key={s} className="flex items-start gap-2 text-sm">
-                <ThumbsUp className="mt-0.5 size-3.5 shrink-0 text-[var(--recommended)]" />
-                <span className="text-muted">{s}</span>
-              </li>
-            ))}
-          </ul>
-        </Section>
-
-        {/* Gaps */}
-        {result ? (
-          result.gaps.length > 0 && (
-            <Section icon={AlertTriangle} title="Gaps & how to mitigate">
-              <ul className="space-y-3">
-                {result.gaps.map((g) => (
-                  <li key={g.gap} className="text-sm">
-                    <div className="flex items-start gap-2">
-                      <CircleSlash className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" />
-                      <span className="font-medium">{g.gap}</span>
-                      <Badge
-                        variant={
-                          g.severity === "blocker"
-                            ? "danger"
-                            : g.severity === "important"
-                              ? "caution"
-                              : "default"
-                        }
-                      >
-                        {g.severity}
-                      </Badge>
-                    </div>
-                    <p className="ml-5 mt-1 text-muted">{g.mitigation}</p>
-                  </li>
-                ))}
-              </ul>
-            </Section>
-          )
-        ) : (
-          (job.gaps.length > 0 || job.cautionFlags.length > 0) && (
-            <Section icon={AlertTriangle} title="Gaps & caution flags">
-              <ul className="space-y-2">
-                {job.cautionFlags.map((c) => (
-                  <li
-                    key={c}
-                    className="flex items-start gap-2 text-sm text-[var(--caution)]"
-                  >
-                    <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
-                    <span>{c}</span>
-                  </li>
-                ))}
-                {job.gaps.map((g) => (
-                  <li key={g} className="flex items-start gap-2 text-sm">
-                    <CircleSlash className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" />
-                    <span className="text-muted">{g}</span>
-                  </li>
-                ))}
-              </ul>
-            </Section>
-          )
+        {breakdown && (
+          <Section icon={Sparkles} title="Score breakdown">
+            <ScoreBreakdown breakdown={breakdown} />
+          </Section>
         )}
 
-        {/* Skills */}
-        <Section icon={ListChecks} title="Required skills">
-          <div className="flex flex-wrap gap-1.5">
-            {job.requiredSkills.map((s) => (
-              <TagPill key={s} tone="primary">
-                {s}
-              </TagPill>
-            ))}
-          </div>
-          {result && result.missingKeywords.length > 0 && (
-            <>
-              <p className="mt-3 text-xs text-muted-foreground">
-                Missing keywords
-              </p>
-              <div className="mt-1.5 flex flex-wrap gap-1.5">
-                {result.missingKeywords.map((s) => (
-                  <TagPill key={s} tone="muted">
-                    {s}
-                  </TagPill>
-                ))}
-              </div>
-            </>
-          )}
-        </Section>
+        {ai && (
+          <Section icon={Lightbulb} title="Suggested action">
+            <p className="text-sm text-muted">{getNextAction(ai.score)}</p>
+          </Section>
+        )}
 
-        {/* Career-Ops A–G blocks (only when the mock evaluation includes them) */}
-        {reportBlocks && (
-          <Section icon={FileText} title="Career-Ops report">
-            <div className="space-y-3">
-              {BLOCK_ORDER.map(({ key, title }) => (
-                <div key={key}>
-                  <p className="text-xs font-semibold text-foreground/80">
-                    {title}
-                  </p>
-                  <p className="mt-0.5 text-sm text-muted">
-                    {reportBlocks[key] as string}
-                  </p>
-                </div>
+        {ai && ai.pros.length > 0 && (
+          <Section icon={ThumbsUp} title="Why this role matches you">
+            <ul className="space-y-2">
+              {ai.pros.map((s) => (
+                <li key={s} className="flex items-start gap-2 text-sm">
+                  <ThumbsUp className="mt-0.5 size-3.5 shrink-0 text-[var(--recommended)]" />
+                  <span className="text-muted">{s}</span>
+                </li>
               ))}
-              <div>
-                <p className="text-xs font-semibold text-foreground/80">
-                  G) Posting Legitimacy
-                </p>
-                <div className="mt-1 flex items-center gap-2">
-                  <Badge
-                    variant={
-                      reportBlocks.postingLegitimacy.tier === "High Confidence"
-                        ? "recommended"
-                        : reportBlocks.postingLegitimacy.tier === "Suspicious"
-                          ? "danger"
-                          : "caution"
-                    }
-                  >
-                    {reportBlocks.postingLegitimacy.tier}
-                  </Badge>
-                </div>
-                <p className="mt-1 text-sm text-muted">
-                  {reportBlocks.postingLegitimacy.notes}
-                </p>
-              </div>
+            </ul>
+          </Section>
+        )}
+
+        {ai && (ai.cons.length > 0 || ai.warnings.length > 0) && (
+          <Section icon={AlertTriangle} title="Gaps & warnings">
+            <ul className="space-y-2">
+              {ai.warnings.map((w) => (
+                <li
+                  key={w}
+                  className="flex items-start gap-2 text-sm text-[var(--caution)]"
+                >
+                  <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
+                  <span>{w}</span>
+                </li>
+              ))}
+              {ai.cons.map((g) => (
+                <li key={g} className="flex items-start gap-2 text-sm">
+                  <CircleSlash className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" />
+                  <span className="text-muted">{g}</span>
+                </li>
+              ))}
+            </ul>
+          </Section>
+        )}
+
+        {job.requiredSkills.length > 0 && (
+          <Section icon={ListChecks} title="Required skills">
+            <div className="flex flex-wrap gap-1.5">
+              {job.requiredSkills.map((s) => (
+                <TagPill key={s} tone="primary">
+                  {s}
+                </TagPill>
+              ))}
             </div>
           </Section>
         )}
@@ -342,16 +221,14 @@ export function JobDetailModal({
         <Section icon={ShieldCheck} title="Location & work authorization">
           <p className="text-sm text-muted">
             {job.location} · {SWIPE_REMOTE_LABELS[job.remoteType]}. Confirm this
-            role&apos;s work-authorization requirements during Review &amp; Apply.
+            role&apos;s work-authorization requirements during Review &amp;
+            Apply.
           </p>
         </Section>
 
         <Section icon={FileText} title="Job description">
           <p className="whitespace-pre-line text-sm leading-relaxed text-muted">
             {job.description}
-          </p>
-          <p className="mt-3 text-xs text-muted-foreground">
-            Placeholder description — full posting arrives from the scraper feed.
           </p>
         </Section>
       </div>

@@ -2,7 +2,6 @@ import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { SwipeStoreProvider } from "@/lib/swipe/swipeStore";
 import { ToastProvider } from "@/components/ui/toast";
-import { ScoresProvider } from "@/lib/scoring/scoresClient";
 import { SwipeInteractionsProvider } from "@/components/swipe/SwipeInteractionsProvider";
 
 /**
@@ -20,9 +19,7 @@ export default async function AppLayout({
   return (
     <SwipeStoreProvider sessionEmail={session.user.email ?? undefined}>
       <ToastProvider>
-        <ScoresProvider>
-          <SwipeInteractionsProvider>{children}</SwipeInteractionsProvider>
-        </ScoresProvider>
+        <SwipeInteractionsProvider>{children}</SwipeInteractionsProvider>
       </ToastProvider>
     </SwipeStoreProvider>
   );

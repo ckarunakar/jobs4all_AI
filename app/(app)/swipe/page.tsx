@@ -14,7 +14,6 @@ import { EmptyState } from "@/components/shared/EmptyState";
 import { useSwipeStore } from "@/lib/swipe/swipeStore";
 import { SCORE_TOP_N } from "@/lib/config";
 import { useSwipeInteractions } from "@/components/swipe/SwipeInteractionsProvider";
-import { useScores } from "@/lib/scoring/scoresClient";
 import { useToast } from "@/components/ui/toast";
 import type { SwipeDecision } from "@/types/swipe";
 
@@ -33,7 +32,6 @@ export default function SwipePage() {
     scoreTopJobs,
   } = useSwipeStore();
   const { openDetail, openApply } = useSwipeInteractions();
-  const { ensureScored } = useScores();
   const { toast } = useToast();
   const deckRef = useRef<SwipeDeckHandle>(null);
 
@@ -50,13 +48,6 @@ export default function SwipePage() {
       "success",
     );
   };
-
-  // Lazily AI-score the current + next two cards as they surface (cached).
-  const upcomingIds = queue.slice(0, 3).map((j) => j.id).join(",");
-  useEffect(() => {
-    if (!hydrated || !upcomingIds) return;
-    ensureScored(upcomingIds.split(","));
-  }, [hydrated, upcomingIds, ensureScored]);
 
   const handleDecision = (jobId: string, decision: SwipeDecision) => {
     decide(jobId, decision);

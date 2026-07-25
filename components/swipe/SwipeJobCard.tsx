@@ -6,7 +6,6 @@ import {
   Check,
   ChevronUp,
   DollarSign,
-  Loader2,
   MapPin,
   Radio,
   Sparkles,
@@ -19,8 +18,6 @@ import { TagPill } from "./TagPill";
 import { Badge } from "@/components/ui/badge";
 import { SWIPE_REMOTE_LABELS, SWIPE_ROLE_LABELS } from "@/types/swipe";
 import type { SwipeJob } from "@/types/swipe";
-import type { JobEvaluationResult } from "@/lib/scoring/types";
-import { USE_REAL_JOBS } from "@/lib/config";
 import { cn } from "@/lib/utils/cn";
 
 interface SwipeJobCardProps {
@@ -28,25 +25,14 @@ interface SwipeJobCardProps {
   onDetails?: () => void;
   /** Drag hint from the deck: shows a translucent INTERESTED / SKIP stamp. */
   dragHint?: "interested" | "skip" | null;
-  /** AI evaluation, once scored. Falls back to the job's baked-in values. */
-  evaluation?: JobEvaluationResult | null;
-  /** True while the AI score is being fetched. */
-  scoring?: boolean;
 }
 
-export function SwipeJobCard({
-  job,
-  onDetails,
-  dragHint,
-  evaluation,
-  scoring,
-}: SwipeJobCardProps) {
-  // Precedence: mock AI evaluation → real Career-Ops score → baked-in mock data.
+export function SwipeJobCard({ job, onDetails, dragHint }: SwipeJobCardProps) {
+  // Real Career-Ops AI score when scored, else the neutral placeholder values.
   const ai = job.careerOpsScore;
-  const score = evaluation?.score ?? ai?.score ?? job.score;
-  const strengths = evaluation?.strengths ?? ai?.pros ?? job.strengths;
+  const score = ai?.score ?? job.score;
+  const strengths = ai?.pros ?? job.strengths;
   const warning =
-    evaluation?.cardSummary.warning ??
     ai?.warnings?.[0] ??
     job.cautionFlags[0] ??
     (job.gaps[0] ? `Gap: ${job.gaps[0]}` : null);
@@ -114,21 +100,16 @@ export function SwipeJobCard({
         {/* Score */}
         <div className="mt-4 rounded-2xl border border-border bg-surface p-4">
           <div className="mb-1.5 flex items-center justify-end">
-            {scoring ? (
-              <span className="flex items-center gap-1 text-[11px] font-medium text-muted-foreground">
-                <Loader2 className="size-3 animate-spin" />
-                AI scoring…
-              </span>
-            ) : evaluation || ai ? (
+            {ai ? (
               <span className="flex items-center gap-1 text-[11px] font-medium text-accent">
                 <Sparkles className="size-3" />
                 AI scored
               </span>
-            ) : USE_REAL_JOBS ? (
+            ) : (
               <span className="text-[11px] font-medium text-muted-foreground">
                 Not scored yet
               </span>
-            ) : null}
+            )}
           </div>
           <ScoreMeter score={score} />
         </div>

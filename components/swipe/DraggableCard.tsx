@@ -28,8 +28,6 @@ interface DraggableCardProps {
   /** Called ONLY after the exit animation finishes — then the parent advances. */
   onCommit: (decision: SwipeDecision) => void;
   onDetails: () => void;
-  evaluation?: import("@/lib/scoring/types").JobEvaluationResult | null;
-  scoring?: boolean;
 }
 
 const OFFSCREEN = 1000;
@@ -51,7 +49,7 @@ const DIR_TO_DECISION: Record<SwipeDir, SwipeDecision> = {
  * prevents triggering a second swipe mid-animation.
  */
 export const DraggableCard = forwardRef<DraggableCardHandle, DraggableCardProps>(
-  function DraggableCard({ job, onCommit, onDetails, evaluation, scoring }, ref) {
+  function DraggableCard({ job, onCommit, onDetails }, ref) {
     const x = useMotionValue(0);
     const y = useMotionValue(0);
     // Rotation is derived from x, so it tracks the drag and never goes stale.
@@ -114,13 +112,7 @@ export const DraggableCard = forwardRef<DraggableCardHandle, DraggableCardProps>
           }
         }}
       >
-        <SwipeJobCard
-          job={job}
-          onDetails={onDetails}
-          dragHint={hint}
-          evaluation={evaluation}
-          scoring={scoring}
-        />
+        <SwipeJobCard job={job} onDetails={onDetails} dragHint={hint} />
       </motion.div>
     );
   },

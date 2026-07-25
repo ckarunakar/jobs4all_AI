@@ -7,7 +7,6 @@ import {
   type DraggableCardHandle,
   type SwipeDir,
 } from "./DraggableCard";
-import { useScoresOptional } from "@/lib/scoring/scoresClient";
 import type { SwipeDecision, SwipeJob } from "@/types/swipe";
 
 export interface SwipeDeckHandle {
@@ -34,7 +33,6 @@ interface SwipeDeckProps {
 export const SwipeDeck = forwardRef<SwipeDeckHandle, SwipeDeckProps>(
   function SwipeDeck({ queue, onDecision, onDetails }, ref) {
     const activeRef = useRef<DraggableCardHandle>(null);
-    const scores = useScoresOptional();
 
     useImperativeHandle(
       ref,
@@ -44,8 +42,6 @@ export const SwipeDeck = forwardRef<SwipeDeckHandle, SwipeDeckProps>(
 
     const top = queue[0];
     const next = queue[1];
-    const topEntry = top ? scores?.getEntry(top.id) : undefined;
-    const nextEntry = next ? scores?.getEntry(next.id) : undefined;
 
     return (
       <div className="relative mx-auto w-full max-w-[600px] overflow-hidden md:max-w-[640px] lg:max-w-[680px]">
@@ -55,7 +51,7 @@ export const SwipeDeck = forwardRef<SwipeDeckHandle, SwipeDeckProps>(
             className="pointer-events-none absolute inset-0 scale-[0.96] translate-y-3 opacity-70 select-none"
             aria-hidden
           >
-            <SwipeJobCard job={next} evaluation={nextEntry?.result ?? null} />
+            <SwipeJobCard job={next} />
           </div>
         )}
 
@@ -65,8 +61,6 @@ export const SwipeDeck = forwardRef<SwipeDeckHandle, SwipeDeckProps>(
             key={top.id}
             ref={activeRef}
             job={top}
-            evaluation={topEntry?.result ?? null}
-            scoring={topEntry?.status === "scoring"}
             onDetails={() => onDetails(top)}
             onCommit={(decision) => onDecision(top.id, decision)}
           />

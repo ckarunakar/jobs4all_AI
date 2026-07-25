@@ -22,44 +22,31 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useSwipeStore } from "@/lib/swipe/swipeStore";
 import { swipeJobScore } from "@/lib/swipe/jobScore";
 import { useSwipeInteractions } from "@/components/swipe/SwipeInteractionsProvider";
-import { useScores } from "@/lib/scoring/scoresClient";
-import { Badge } from "@/components/ui/badge";
 import { RECOMMEND_THRESHOLD } from "@/lib/careerOps/scoreUtils";
 
 export default function Demo2DashboardPage() {
   const { jobs, metrics, hydrated } = useSwipeStore();
   const { openDetail } = useSwipeInteractions();
-  const { entries, mode, enabled, ensureScored } = useScores();
-
-  // Effective score = AI evaluation when available, else the baked-in score.
-  const effective = useMemo(
-    () => (id: string, fallback: number) =>
-      entries[id]?.result?.score ?? fallback,
-    [entries],
-  );
 
   const scored = useMemo(
     () => ({
-      count: jobs.filter((j) => entries[j.id]?.status === "scored").length,
-      recommended: jobs.filter(
-        (j) => effective(j.id, swipeJobScore(j)) >= RECOMMEND_THRESHOLD,
-      ).length,
+      count: jobs.filter((j) => j.careerOpsScore).length,
+      recommended: jobs.filter((j) => swipeJobScore(j) >= RECOMMEND_THRESHOLD)
+        .length,
       average: jobs.length
-        ? jobs.reduce((s, j) => s + effective(j.id, swipeJobScore(j)), 0) / jobs.length
+        ? jobs.reduce((s, j) => s + swipeJobScore(j), 0) / jobs.length
         : 0,
     }),
-    [jobs, entries, effective],
+    [jobs],
   );
 
   const topRecommended = useMemo(
     () =>
       [...jobs]
-        .filter((j) => effective(j.id, swipeJobScore(j)) >= RECOMMEND_THRESHOLD)
-        .sort(
-          (a, b) => effective(b.id, swipeJobScore(b)) - effective(a.id, swipeJobScore(a)),
-        )
+        .filter((j) => swipeJobScore(j) >= RECOMMEND_THRESHOLD)
+        .sort((a, b) => swipeJobScore(b) - swipeJobScore(a))
         .slice(0, 5),
-    [jobs, effective],
+    [jobs],
   );
 
   const interestedJobs = useMemo(
@@ -73,31 +60,6 @@ export default function Demo2DashboardPage() {
       description="Your swipe activity and high-fit roles"
     >
       <div className="space-y-5">
-        {/* Scoring control (hidden when AI scoring is disabled, e.g. live DB jobs) */}
-        {enabled && (
-        <div className="flex items-center justify-between rounded-lg border border-border bg-surface px-4 py-3">
-          <div className="flex items-center gap-2 text-sm">
-            <Sparkles className="size-4 text-accent" />
-            <span className="font-medium">Career-Ops scoring</span>
-            {mode && (
-              <Badge variant={mode === "live" ? "recommended" : "caution"}>
-                {mode === "live" ? "Live" : "Mock Mode"}
-              </Badge>
-            )}
-            <span className="text-xs text-muted-foreground">
-              {scored.count}/{jobs.length} scored
-            </span>
-          </div>
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => ensureScored(jobs.map((j) => j.id))}
-          >
-            Score all jobs
-          </Button>
-        </div>
-        )}
-
         {/* Stats */}
         <div className="grid grid-cols-2 gap-3">
           {!hydrated ? (
