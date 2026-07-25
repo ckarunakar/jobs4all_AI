@@ -17,8 +17,7 @@ SwipeJob + candidate profile
 scoreJob.evaluateJob()
   ├─ computeInputHash(job + profile + prompt + provider + model)
   ├─ cache hit? → return cached  (data/job-scores.json)
-  ├─ provider.evaluate() ──► ClaudeScoringProvider  (structured JSON via messages.parse)
-  │                          └─ or MockScoringProvider (deterministic, no key)
+  ├─ provider.evaluate() ──► AiScoringProvider  (lib/scoring/providers/aiProvider.ts)
   ├─ validate (zod) + normalize (clamp 1–5, dedupe, cap bullets)
   ├─ derive scoreLabel + attach metadata (model, provider, inputHash, scoredAt)
   └─ write cache
@@ -44,17 +43,14 @@ interface LlmProvider {
 }
 ```
 
-- `ClaudeScoringProvider` — [`lib/scoring/providers/claudeProvider.ts`](lib/scoring/providers/claudeProvider.ts)
-  (Anthropic Node SDK, structured outputs via `messages.parse` + `zodOutputFormat`).
-- `MockScoringProvider` — [`lib/scoring/providers/mockProvider.ts`](lib/scoring/providers/mockProvider.ts)
-  (deterministic, profile-aware, no network). Used automatically when there's no API key.
+- `AiScoringProvider` — [`lib/scoring/providers/aiProvider.ts`](lib/scoring/providers/aiProvider.ts) — provider-neutral (DeepSeek or Anthropic via `lib/ai`)
 - Selected in [`providerRegistry.ts`](lib/scoring/providerRegistry.ts). Add Gemini /
   DeepSeek / OpenAI / local by implementing `LlmProvider` and branching there — **nothing
   else changes** (routes, cache, UI are provider-agnostic).
 
 ## Setup (`.env.local`)
 
-Copy [`.env.local.example`](.env.local.example) → `.env.local`:
+Copy [`.env.example`](.env.example) → `.env.local`:
 
 ```env
 AI_PROVIDER=deepseek                  # "deepseek" (cheap) or "anthropic" (fallback)
@@ -65,13 +61,13 @@ DEEPSEEK_BASE_URL=https://api.deepseek.com
 
 ANTHROPIC_API_KEY=sk-ant-...          # fallback provider
 ANTHROPIC_MODEL=claude-haiku-4-5
-# SCORING_PROVIDER=mock               # force mock even with a key (free demos)
 ```
 
 - **Provider-neutral:** the AI call lives behind `lib/ai/modelClient.ts`
   (`generateCareerOpsJson`) → `lib/ai/deepseek.ts` / `lib/ai/anthropic.ts`. Switching
   providers is a one-line `AI_PROVIDER` change; the rubric, cache, and routes don't change.
-- **No key set → mock mode** (free, deterministic) so the demo always runs.
+- **Requires an API key** — set `DEEPSEEK_API_KEY` or `ANTHROPIC_API_KEY` (matching
+  `AI_PROVIDER`). Scoring fails without one; there is no offline fallback provider.
 - Cache rows are namespaced by provider (`ModelName = "deepseek:deepseek-v4-flash"`), so
   DeepSeek and Anthropic scores never collide.
 - Keys are read only inside server code (`app/api/scoring/*`, `lib/ai/*`) — never sent to the client.
@@ -85,8 +81,10 @@ ANTHROPIC_MODEL=claude-haiku-4-5
   (concurrency-limited to 2, capped at 20). The dashboard's **Score all jobs** button uses this.
 - **Re-score:** the job detail panel has a **Re-score** button (`forceRefresh: true`).
 
-Both routes also accept an optional `profile` (the app's editable profile); without it they
-use the server demo candidate ([`lib/scoring/demoCandidate.ts`](lib/scoring/demoCandidate.ts)).
+Both routes also accept an optional `profile` (the app's editable profile) that enriches the
+candidate; the primary signal is always the signed-in user's latest uploaded resume, resolved
+server-side in [`lib/careerOps/scoringService.ts`](lib/careerOps/scoringService.ts). If the user
+has no uploaded resume, scoring fails with `NoResumeError`.
 
 ## Caching
 
