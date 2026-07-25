@@ -1,7 +1,7 @@
 /**
  * Provider selection. Returns the configured AI provider (DeepSeek or
  * Anthropic, per AI_PROVIDER). Scoring requires an API key — there is no
- * mock fallback.
+ * offline fallback provider.
  *
  * The AI call itself lives in lib/ai/* behind a provider-neutral seam, so
  * swapping models is a one-line env change — UI/routes/cache don't change.

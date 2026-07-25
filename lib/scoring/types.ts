@@ -126,7 +126,7 @@ export interface LlmEvaluation {
   reasons: string[];
   missingKeywords: string[];
   matchedKeywords: string[];
-  /** Optional heavy fields (mock provider + detailed report view only). */
+  /** Optional heavy fields (detailed report view only). */
   careerOpsBlocks?: CareerOpsBlocks;
   cardSummary: CardSummary;
   detailedReportMarkdown?: string;
@@ -157,12 +157,10 @@ export interface JobEvaluationInput {
  * input into a validated `LlmEvaluation`.
  */
 export interface LlmProvider {
-  /** Stable id surfaced in results + settings, e.g. "claude" | "mock". */
+  /** Stable id surfaced in results + settings, e.g. "deepseek" | "anthropic". */
   readonly name: string;
   /** Model id this provider will use (for cache keys + results). */
   readonly model: string;
   evaluate(input: JobEvaluationInput): Promise<LlmEvaluation>;
 }
 
-/** Per-job result of a (possibly cached) scoring request. */
-export type ScoreStatus = "scored" | "cached" | "error";

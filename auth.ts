@@ -25,7 +25,7 @@ export const googleConfigured = Boolean(
 );
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
-  // Local dev + single-host demo — trust the request host (avoids UntrustedHost).
+  // Local dev + single-host deployment — trust the request host (avoids UntrustedHost).
   trustHost: true,
   session: { strategy: "jwt" },
   pages: { signIn: "/login" },

@@ -114,7 +114,7 @@ export function SwipeJobCard({ job, onDetails, dragHint }: SwipeJobCardProps) {
           <ScoreMeter score={score} />
         </div>
 
-        {/* Match reasons (AI/mock) — or the job description for real, unscored jobs */}
+        {/* Match reasons (AI) — or the job description for real, unscored jobs */}
         {strengths.length > 0 ? (
           <div className="mt-4 space-y-1.5">
             {strengths.slice(0, 3).map((s) => (

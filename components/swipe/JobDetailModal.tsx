@@ -151,7 +151,7 @@ export function JobDetailModal({
           <div className="py-2 text-center">
             <p className="text-sm font-medium">Not scored yet</p>
             <p className="mt-1 text-xs text-muted-foreground">
-              Use “Score top jobs with AI” on the swipe screen to compare this
+              Use “Score top 10 jobs with AI” on the swipe screen to compare this
               job against your uploaded resume.
             </p>
           </div>

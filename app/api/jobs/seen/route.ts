@@ -1,16 +1,14 @@
 /**
  * /api/jobs/seen — per-user "seen jobs" history.
  *   POST   { jobReference, action } → mark a job seen for the logged-in user.
- *   DELETE                          → clear the user's seen history (dev/testing).
  *
- * Both require a session (auth()). The user id comes from the session, never
+ * Requires a session (auth()). The user id comes from the session, never
  * the client. Parameterized SQL only.
  */
 
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import {
-  clearSeenJobsForUser,
   markJobSeen,
   SEEN_ACTIONS,
   type SeenAction,
@@ -59,26 +57,6 @@ export async function POST(req: Request) {
   } catch (err) {
     const message = err instanceof Error ? err.message : "Failed to mark seen";
     console.error(`[api/jobs/seen] ${message}`);
-    return NextResponse.json({ ok: false, error: message }, { status: 500 });
-  }
-}
-
-export async function DELETE() {
-  const session = await auth();
-  const loginUserId = session?.user?.id ? Number(session.user.id) : undefined;
-  if (!loginUserId) {
-    return NextResponse.json(
-      { ok: false, error: "Not authenticated" },
-      { status: 401 },
-    );
-  }
-
-  try {
-    await clearSeenJobsForUser(loginUserId);
-    return NextResponse.json({ ok: true });
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Failed to clear";
-    console.error(`[api/jobs/seen DELETE] ${message}`);
     return NextResponse.json({ ok: false, error: message }, { status: 500 });
   }
 }

@@ -90,7 +90,7 @@ function withStatuses(
   return jobs.map((j) => ({ ...j, status: statuses[j.id] ?? j.status }));
 }
 
-// v2: profile now starts empty (was the "Jordan Lee" demo profile in v1).
+// v2: profile now starts empty (was the "Jordan Lee" sample profile in v1).
 // Bumping the key discards old persisted state so the blank profile takes effect.
 const STORAGE_KEY = "itjobcafe.swipe.v2";
 
@@ -211,7 +211,7 @@ export function SwipeStoreProvider({
       : DEFAULT_SWIPE_PROFILE;
     setProfile(sessionEmail ? { ...base, email: sessionEmail } : base);
 
-    // Then load the base jobs (real feed or mock) and re-apply statuses.
+    // Then load the base jobs (the SQL feed) and re-apply statuses.
     fetchJobs().then((res) => {
       if (cancelled) return;
       setJobs(withStatuses(res.jobs, statuses));

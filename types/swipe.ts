@@ -1,7 +1,7 @@
 /**
- * Demo 2 (swipe-first) types.
- * Kept separate from Demo 1's `Job`/`ApplicationStatus` so the two demos stay
- * fully independent. Score types/utilities are shared via lib/careerOps.
+ * Swipe-first job types.
+ * Kept separate from the legacy `Job`/`ApplicationStatus` types so the two
+ * flows stay fully independent. Score types/utilities are shared via lib/careerOps.
  */
 
 import type { CareerOpsScore, RemoteType } from "@/lib/careerOps/types";
@@ -29,7 +29,7 @@ export const SWIPE_REMOTE_LABELS: Record<RemoteType, string> = {
   onsite: "On-site",
 };
 
-/** Lifecycle of a job within the swipe demo. */
+/** Lifecycle of a job within the swipe flow. */
 export type SwipeJobStatus =
   | "new" // not yet decided — still in the deck
   | "interested" // swiped right

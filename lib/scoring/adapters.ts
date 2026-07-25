@@ -58,7 +58,7 @@ export function toCandidateProfile(p: ResumeProfile): CandidateProfile {
     .join("\n");
 
   return {
-    id: p.email || "demo-candidate",
+    id: p.email || "unknown-candidate",
     label: p.fullName || "Candidate",
     targetRoles,
     targetLocations: p.locationPreferences,

@@ -6,9 +6,9 @@
  *   resume-by-email → ensure resume text → job-by-id → DB cache check →
  *   evaluate (engine) → map to card score → DB cache upsert.
  *
- * Reuses: evaluateJob (provider + Zod validation + normalization), the Claude
+ * Reuses: evaluateJob (provider + Zod validation + normalization), the AI
  * provider, and the Career-Ops rubric. Caches only in SQL Server (DB cache),
- * not the mock file cache (skipCache: true).
+ * not the local file cache (skipCache: true).
  */
 
 import "server-only";
@@ -48,7 +48,7 @@ export class NoResumeError extends Error {
 
 /**
  * Find the user's latest resume: prefer the logged-in user id (LoginUserID),
- * then fall back to email (keeps pre-auth demo data working).
+ * then fall back to email (covers sessions that lack a numeric id).
  */
 async function resolveResume(
   userId?: number,
@@ -197,7 +197,7 @@ async function mapWithConcurrency<T, R>(
 export interface ScoreOneForEmailArgs {
   /** Logged-in user id (preferred). */
   userId?: number;
-  /** Email fallback (or pre-auth demo). */
+  /** Email fallback (used when the session lacks a numeric id). */
   email?: string;
   jobId: string;
   profile?: ResumeProfile;
@@ -223,7 +223,7 @@ export async function scoreOneForEmail(
 export interface ScoreTopArgs {
   /** Logged-in user id (preferred). */
   userId?: number;
-  /** Email fallback (or pre-auth demo). */
+  /** Email fallback (used when the session lacks a numeric id). */
   email?: string;
   jobIds: string[];
   profile?: ResumeProfile;

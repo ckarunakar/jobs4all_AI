@@ -51,7 +51,7 @@ export const evaluationSchema = z.object({
   missingKeywords: z.array(z.string()),
   matchedKeywords: z.array(z.string()),
   // Optional heavy fields — omitted by the fast card-scoring flow, still
-  // produced by the mock provider for the detailed report view.
+  // produced for the detailed report view.
   careerOpsBlocks: z
     .object({
       roleSummary: z.string(),

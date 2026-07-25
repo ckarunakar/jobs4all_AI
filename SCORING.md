@@ -14,15 +14,18 @@ SwipeJob + candidate profile
 /api/scoring/score-job | score-batch
         │
         ▼
+scoringService: cache hit? → return cached  (career_ops_scores DB table)
+        │  (skipCache: true — the engine's file cache below is bypassed in prod)
+        ▼
 scoreJob.evaluateJob()
   ├─ computeInputHash(job + profile + prompt + provider + model)
-  ├─ cache hit? → return cached  (data/job-scores.json)
   ├─ provider.evaluate() ──► AiScoringProvider  (lib/scoring/providers/aiProvider.ts)
   ├─ validate (zod) + normalize (clamp 1–5, dedupe, cap bullets)
-  ├─ derive scoreLabel + attach metadata (model, provider, inputHash, scoredAt)
-  └─ write cache
+  └─ derive scoreLabel + attach metadata (model, provider, inputHash, scoredAt)
         ▼
 JobEvaluationResult → card score/label/strengths/gaps + detail report
+        ▼
+scoringService writes the result to career_ops_scores
 ```
 
 - **Scale (Career-Ops):** recommended apply threshold = **4.0**. Labels: Excellent (4.5+),
@@ -77,7 +80,7 @@ ANTHROPIC_MODEL=claude-haiku-4-5
 - **Manual, user-triggered scoring:** there is no automatic/lazy scoring on card view — the
   swipe page's **"Score top N jobs with AI"** button (`SCORE_TOP_N` in
   [`lib/config.ts`](lib/config.ts), currently 10) is what scores jobs, using the signed-in
-  session's (email-fallback) latest uploaded resume. Results attach to each job as
+  session's latest uploaded resume. Results attach to each job as
   `careerOpsScore`; until scored, the job detail modal shows "Not scored yet".
 - **Single job:** `POST /api/scoring/score-job` `{ "jobId": "...", "forceRefresh": false }` —
   same real flow (session identity, DB cache) for one job; exists as an API with no current
@@ -94,10 +97,16 @@ has no uploaded resume, scoring fails with `NoResumeError`.
 
 ## Caching
 
-Scores are cached in `data/job-scores.json` (gitignored) keyed by an input hash of
-`promptVersion + provider + model + job + profile`. Change any of those → re-score.
-Swap [`scoreCache.ts`](lib/scoring/scoreCache.ts) for a DB table later (the
-`getCached`/`setCached` signatures are the seam).
+**Production:** the real-jobs flow ([`lib/careerOps/scoringService.ts`](lib/careerOps/scoringService.ts))
+caches scores in the `career_ops_scores` SQL Server table, keyed by resume + job + provider/model
++ rubric version, and calls `evaluateJob` with `skipCache: true` so the engine's own file cache is
+never consulted or written in prod.
+
+**Local dev seam:** the underlying engine ([`lib/scoring/scoreJob.ts`](lib/scoring/scoreJob.ts)) can
+also cache to `data/job-scores.json` (gitignored) via [`scoreCache.ts`](lib/scoring/scoreCache.ts),
+keyed by an input hash of `promptVersion + provider + model + job + profile`. This path only runs
+when a caller does *not* pass `skipCache: true` — useful for local scripts/tests that exercise the
+engine directly, outside the DB-backed production flow.
 
 ## Cost controls
 

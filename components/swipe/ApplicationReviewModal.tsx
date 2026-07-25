@@ -111,7 +111,7 @@ export function ApplicationReviewModal({
           <div className="flex items-start gap-2 rounded-lg border border-primary/30 bg-primary-soft p-3 text-xs text-accent">
             <ShieldCheck className="mt-0.5 size-4 shrink-0" />
             <span>
-              This demo does not submit applications automatically. You are
+              ITJobCafe never submits applications automatically. You are
               always in control — you review, you decide, you apply.
             </span>
           </div>

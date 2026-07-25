@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { SWIPE_NAV_ITEMS } from "./swipe-nav-items";
 import { cn } from "@/lib/utils/cn";
 
-/** Bottom tab bar — the primary navigation for the mobile-first swipe demo. */
+/** Bottom tab bar — the primary navigation for the mobile-first swipe flow. */
 export function MobileNav() {
   const pathname = usePathname();
 

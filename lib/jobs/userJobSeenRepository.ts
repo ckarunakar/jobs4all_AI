@@ -63,12 +63,3 @@ export async function markJobSeen(args: {
          VALUES (@LoginUserID, @JobReference, @SourceTable, @LastAction);`,
     );
 }
-
-/** Dev/testing: wipe a user's seen history so jobs can resurface. */
-export async function clearSeenJobsForUser(loginUserId: number): Promise<void> {
-  const pool = await getPool();
-  await pool
-    .request()
-    .input("LoginUserID", sql.Int, loginUserId)
-    .query(`DELETE FROM ${SEEN_TABLE} WHERE LoginUserID = @LoginUserID`);
-}

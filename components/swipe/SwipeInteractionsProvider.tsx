@@ -14,7 +14,7 @@ interface SwipeInteractions {
 
 const Ctx = createContext<SwipeInteractions | null>(null);
 
-/** Provides the detail + Review & Apply modals to every Demo 2 page. */
+/** Provides the detail + Review & Apply modals to every swipe page. */
 export function SwipeInteractionsProvider({
   children,
 }: {
