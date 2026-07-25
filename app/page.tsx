@@ -17,7 +17,7 @@ export default async function LandingPage() {
           <Logo />
           <Link href={loggedIn ? "/swipe" : "/login"}>
             <Button size="sm">
-              {loggedIn ? "Open Swipe Demo" : "Login to see demo"}
+              {loggedIn ? "Open the app" : "Log in"}
               <ArrowRight className="size-4" />
             </Button>
           </Link>
@@ -31,7 +31,7 @@ export default async function LandingPage() {
         <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-3 px-5 py-8 text-sm text-muted-foreground sm:flex-row">
           <Logo />
           <p className="font-medium">
-            Frontend MVP · mock data · Career-Ops integration via adapter layer
+            AI-ranked job discovery for students and new grads
           </p>
         </div>
       </footer>

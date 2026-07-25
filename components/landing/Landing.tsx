@@ -9,7 +9,39 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SwipeJobCard } from "@/components/swipe/SwipeJobCard";
-import { MOCK_SWIPE_JOBS } from "@/lib/mockData/swipeJobs";
+import type { SwipeJob } from "@/types/swipe";
+
+/** Illustrative sample card for the marketing hero (not a live posting). */
+const PREVIEW_JOB: SwipeJob = {
+  id: "preview-001",
+  company: "Vercel",
+  companyLogo: "#6366f1",
+  title: "Software Engineering Intern",
+  location: "San Francisco, CA",
+  remoteType: "hybrid",
+  roleType: "internship",
+  compensation: "$9,500 / month",
+  source: "Sample role",
+  score: 4.8,
+  scoreLabel: "Excellent fit",
+  matchSummary:
+    "Your Next.js projects and TypeScript depth line up almost perfectly with this team.",
+  strengths: [
+    "Strong React + TypeScript portfolio",
+    "Shipped a Next.js App Router project",
+    "Cares about developer experience",
+  ],
+  gaps: ["No large-scale production experience yet"],
+  cautionFlags: [],
+  requiredSkills: ["React", "TypeScript", "Next.js"],
+  niceToHaveSkills: ["Edge runtime", "Serverless", "CI/CD"],
+  tags: ["React", "TypeScript", "Next.js", "Edge"],
+  description:
+    "Join the framework team building tooling millions of developers rely on. Work on the Next.js App Router, edge runtime, and DX features alongside senior engineers.",
+  status: "new",
+  postedDate: "2026-06-18",
+  applicationUrl: "https://example.com/apply/vercel-swe-intern",
+};
 
 const FEATURES = [
   {
@@ -43,9 +75,9 @@ const FEATURES = [
 ];
 
 export function Landing({ loggedIn = false }: { loggedIn?: boolean }) {
-  const previewJob = MOCK_SWIPE_JOBS[0];
+  const previewJob = PREVIEW_JOB;
   const ctaHref = loggedIn ? "/swipe" : "/login";
-  const ctaLabel = loggedIn ? "Open Swipe Demo" : "Login to see demo";
+  const ctaLabel = loggedIn ? "Open the app" : "Log in to get started";
 
   return (
     <>
@@ -84,7 +116,7 @@ export function Landing({ loggedIn = false }: { loggedIn?: boolean }) {
               </Link>
             </div>
             <p className="mt-5 text-sm font-medium text-muted-foreground">
-              Mobile-first · mock data · no auto-apply, ever
+              Mobile-first · human-confirmed applications · no auto-apply, ever
             </p>
           </div>
 
@@ -158,7 +190,7 @@ export function Landing({ loggedIn = false }: { loggedIn?: boolean }) {
               Ready to find your fit?
             </h2>
             <p className="mt-2 text-lg text-[#111827]/80">
-              Start swiping through high-fit tech roles — all on mock data.
+              Start swiping through high-fit tech roles, scored against your resume.
             </p>
           </div>
           <Link href={ctaHref} className="shrink-0">

@@ -19,7 +19,7 @@ export default async function LoginPage() {
             Welcome back
           </h1>
           <p className="mt-1 text-sm text-muted">
-            Log in to open the swipe demo.
+            Log in to your account.
           </p>
         </div>
 
