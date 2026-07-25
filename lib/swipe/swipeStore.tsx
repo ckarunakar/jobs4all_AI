@@ -290,10 +290,6 @@ export function SwipeStoreProvider({
 
   const scoreTopJobs = useCallback(async (): Promise<ScoreTopJobsResult> => {
     if (scoring) return { ok: false, error: "Already scoring…" };
-    const email = profile.email?.trim();
-    if (!email) {
-      return { ok: false, error: "Add your email in your profile first." };
-    }
     const topJobs = jobs.slice(0, SCORE_TOP_N);
     if (topJobs.length === 0) return { ok: false, error: "No jobs to score." };
 
@@ -303,7 +299,6 @@ export function SwipeStoreProvider({
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          email,
           jobIds: topJobs.map((j) => j.id),
           profile,
         }),

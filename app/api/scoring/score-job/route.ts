@@ -18,13 +18,20 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 interface Body {
-  email?: string;
   jobId?: string;
   profile?: ResumeProfile;
   forceRefresh?: boolean;
 }
 
 export async function POST(req: Request) {
+  const session = await auth();
+  if (!session?.user) {
+    return NextResponse.json(
+      { ok: false, error: "Sign in to score jobs." },
+      { status: 401 },
+    );
+  }
+
   let body: Body;
   try {
     body = (await req.json()) as Body;
@@ -42,46 +49,38 @@ export async function POST(req: Request) {
     );
   }
 
-  // --- Real-jobs flow: identity from the logged-in session (email fallback).
-  const session = await auth();
-  const userId = session?.user?.id ? Number(session.user.id) : undefined;
-  const email = session?.user?.email ?? body.email?.trim();
-  if (userId || email) {
-    try {
-      const outcome = await scoreOneForEmail({
-        userId,
-        email,
-        jobId: body.jobId,
-        profile: body.profile,
-        forceRefresh: body.forceRefresh,
-      });
-      if (outcome.status === "error") {
-        return NextResponse.json(
-          { ok: false, error: outcome.error ?? "Scoring failed" },
-          { status: 404 },
-        );
-      }
-      return NextResponse.json({
-        ok: true,
-        ...getProviderInfo(),
-        careerOpsScore: outcome.careerOpsScore,
-        cached: outcome.status === "cached",
-      });
-    } catch (err) {
-      if (err instanceof NoResumeError) {
-        return NextResponse.json(
-          { ok: false, error: err.message },
-          { status: 400 },
-        );
-      }
-      const message = err instanceof Error ? err.message : "Scoring failed";
-      console.error(`[score-job] ${message}`);
-      return NextResponse.json({ ok: false, error: message }, { status: 500 });
+  // --- Real-jobs flow: identity from the logged-in session.
+  const userId = session.user.id ? Number(session.user.id) : undefined;
+  const email = session.user.email ?? undefined;
+  try {
+    const outcome = await scoreOneForEmail({
+      userId,
+      email,
+      jobId: body.jobId,
+      profile: body.profile,
+      forceRefresh: body.forceRefresh,
+    });
+    if (outcome.status === "error") {
+      return NextResponse.json(
+        { ok: false, error: outcome.error ?? "Scoring failed" },
+        { status: 404 },
+      );
     }
+    return NextResponse.json({
+      ok: true,
+      ...getProviderInfo(),
+      careerOpsScore: outcome.careerOpsScore,
+      cached: outcome.status === "cached",
+    });
+  } catch (err) {
+    if (err instanceof NoResumeError) {
+      return NextResponse.json(
+        { ok: false, error: err.message },
+        { status: 400 },
+      );
+    }
+    const message = err instanceof Error ? err.message : "Scoring failed";
+    console.error(`[score-job] ${message}`);
+    return NextResponse.json({ ok: false, error: message }, { status: 500 });
   }
-
-  return NextResponse.json(
-    { ok: false, error: "Sign in to score jobs." },
-    { status: 401 },
-  );
 }
