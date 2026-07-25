@@ -9,16 +9,16 @@
   "Score top 10" clicks reuse results instead of re-calling the model. The
   unique index enforces one row per combination (upserts update in place).
 
-  Scores compare a resume (ITJC_SCRAPPER.dbo.temp_tbl_resume_upload.ID) against a
+  Scores compare a resume (ITJC_SCRAPPER.dbo.resume_upload.ID) against a
   job (ITJC.dbo.tbl_JobMaster.ID). JSON columns hold the structured detail.
 */
 
 USE [ITJC_SCRAPPER];
 GO
 
-IF OBJECT_ID('dbo.temp_tbl_career_ops_scores', 'U') IS NULL
+IF OBJECT_ID('dbo.career_ops_scores', 'U') IS NULL
 BEGIN
-    CREATE TABLE dbo.temp_tbl_career_ops_scores (
+    CREATE TABLE dbo.career_ops_scores (
         ID              INT IDENTITY(1,1) PRIMARY KEY,
         ResumeUploadID  INT            NOT NULL,
         UserEmail       NVARCHAR(255)  NOT NULL,
@@ -38,8 +38,8 @@ BEGIN
         UpdatedAt       DATETIME2      NOT NULL DEFAULT SYSUTCDATETIME()
     );
 
-    CREATE UNIQUE INDEX UX_temp_tbl_career_ops_scores_resume_job_model_rubric
-        ON dbo.temp_tbl_career_ops_scores
+    CREATE UNIQUE INDEX UX_career_ops_scores_resume_job_model_rubric
+        ON dbo.career_ops_scores
         (ResumeUploadID, JobID, ModelName, RubricVersion);
 END;
 GO

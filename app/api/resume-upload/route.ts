@@ -11,7 +11,7 @@
  *
  * SERVER-SIDE ONLY. Credentials come from env; every value is bound via
  * `request.input(...)` — no user input is concatenated into SQL. The file is
- * stored as VARBINARY(MAX) in ITJC_SCRAPPER.dbo.temp_tbl_resume_upload.
+ * stored as VARBINARY(MAX) in ITJC_SCRAPPER.dbo.resume_upload.
  */
 
 import { NextResponse } from "next/server";
@@ -126,7 +126,7 @@ export async function POST(req: Request) {
       .input("ResumeText", sql.NVarChar(sql.MAX), resumeText)
       .input("LoginUserID", sql.Int, loginUserId)
       .query(
-        `INSERT INTO ITJC_SCRAPPER.dbo.temp_tbl_resume_upload
+        `INSERT INTO ITJC_SCRAPPER.dbo.resume_upload
            (JobId, FirstName, LastName, Email, JobTitle, ResumeName, Resume, FileType, Phone, ResumeText, LoginUserID)
          OUTPUT INSERTED.ID
          VALUES (@JobId, @FirstName, @LastName, @Email, @JobTitle, @ResumeName, @Resume, @FileType, @Phone, @ResumeText, @LoginUserID)`,

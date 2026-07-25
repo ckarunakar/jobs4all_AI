@@ -2,7 +2,7 @@
  * Per-user "seen jobs" history. SERVER-SIDE ONLY.
  * --------------------------------------------------------------------------
  * Records which jobs a logged-in user has swiped/reviewed so the feed can skip
- * them next time. Writes to ITJC_SCRAPPER.dbo.temp_user_job_seen via the pooled
+ * them next time. Writes to ITJC_SCRAPPER.dbo.user_job_seen via the pooled
  * connection. All values are bound parameters. Reads happen in SQL (NOT EXISTS
  * in the jobs query) — we never pull a user's whole seen list into Node.
  */
@@ -10,7 +10,7 @@
 import "server-only";
 import { getPool, sql } from "@/lib/db/sqlServer";
 
-const SEEN_TABLE = "ITJC_SCRAPPER.dbo.temp_user_job_seen";
+const SEEN_TABLE = "ITJC_SCRAPPER.dbo.user_job_seen";
 
 /** The scrap-jobs source table (matches the seen row's SourceTable). */
 export const SCRAP_SOURCE_TABLE = "temp_tbl_Scrap_jobs";

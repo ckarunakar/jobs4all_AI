@@ -1,7 +1,7 @@
 /**
  * Career-Ops score cache. SERVER-SIDE ONLY.
  * --------------------------------------------------------------------------
- * Reads/writes ITJC_SCRAPPER.dbo.temp_tbl_career_ops_scores, keyed by
+ * Reads/writes ITJC_SCRAPPER.dbo.career_ops_scores, keyed by
  * (ResumeUploadID, JobID, ModelName, RubricVersion) so repeated scoring reuses
  * results. All values are bound parameters; JSON columns hold the detail.
  */
@@ -10,7 +10,7 @@ import "server-only";
 import { getPool, sql } from "./sqlServer";
 import type { CareerOpsAiScore } from "@/lib/careerOps/aiScore";
 
-const SCORES_TABLE = "ITJC_SCRAPPER.dbo.temp_tbl_career_ops_scores";
+const SCORES_TABLE = "ITJC_SCRAPPER.dbo.career_ops_scores";
 
 export interface ScoreCacheKey {
   resumeUploadId: number;

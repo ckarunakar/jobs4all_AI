@@ -182,7 +182,7 @@ export async function fetchJobListings(
     request.input("loginUserId", sql.Int, loginUserId);
     where.push(
       `NOT EXISTS (
-         SELECT 1 FROM ITJC_SCRAPPER.dbo.temp_user_job_seen s
+         SELECT 1 FROM ITJC_SCRAPPER.dbo.user_job_seen s
          WHERE s.LoginUserID = @loginUserId
            AND s.JobReference = job_reference
            AND s.SourceTable = 'temp_tbl_Scrap_jobs'

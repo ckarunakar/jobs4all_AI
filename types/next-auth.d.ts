@@ -10,7 +10,7 @@ declare module "next-auth" {
 }
 
 declare module "next-auth/jwt" {
-  /** Our temp_login_users.ID carried on the JWT. */
+  /** Our login_users.ID carried on the JWT. */
   interface JWT {
     uid?: number;
   }

@@ -3,7 +3,7 @@
  * --------------------------------------------------------------------------
  * Providers: Google (OAuth) + Credentials (email/password, bcrypt). JWT session
  * strategy — no DB session table. Users are stored in
- * ITJC_SCRAPPER.dbo.temp_login_users (see lib/auth/users). `session.user.id` is
+ * ITJC_SCRAPPER.dbo.login_users (see lib/auth/users). `session.user.id` is
  * our SQL Server user ID. Secrets come from env (AUTH_SECRET, AUTH_GOOGLE_ID,
  * AUTH_GOOGLE_SECRET) and never reach the client.
  */

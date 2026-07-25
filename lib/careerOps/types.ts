@@ -160,7 +160,7 @@ export interface ResumeFileRef {
   uploadedAt: string;
   /** True once resume text has been extracted for AI scoring. */
   parsed: boolean;
-  /** Row ID in dbo.temp_tbl_resume_upload once uploaded to SQL Server. */
+  /** Row ID in dbo.resume_upload once uploaded to SQL Server. */
   dbId?: number;
 }
 

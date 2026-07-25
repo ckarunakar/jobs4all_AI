@@ -2,14 +2,14 @@
  * Resume reads for scoring. SERVER-SIDE ONLY.
  * --------------------------------------------------------------------------
  * Looks up a user's most recent uploaded resume (by email, until real auth)
- * from ITJC_SCRAPPER.dbo.temp_tbl_resume_upload, and can back-fill ResumeText
+ * from ITJC_SCRAPPER.dbo.resume_upload, and can back-fill ResumeText
  * from the stored binary. All values are bound parameters.
  */
 
 import "server-only";
 import { getPool, sql } from "./sqlServer";
 
-const RESUME_TABLE = "ITJC_SCRAPPER.dbo.temp_tbl_resume_upload";
+const RESUME_TABLE = "ITJC_SCRAPPER.dbo.resume_upload";
 
 export interface ResumeRecord {
   id: number;

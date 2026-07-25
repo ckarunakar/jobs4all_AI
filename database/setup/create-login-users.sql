@@ -15,9 +15,9 @@
 USE [ITJC_SCRAPPER];
 GO
 
-IF OBJECT_ID('dbo.temp_login_users', 'U') IS NULL
+IF OBJECT_ID('dbo.login_users', 'U') IS NULL
 BEGIN
-    CREATE TABLE dbo.temp_login_users (
+    CREATE TABLE dbo.login_users (
         ID                   INT IDENTITY(1,1) PRIMARY KEY,
         Email                NVARCHAR(255) NOT NULL UNIQUE,
         Name                 NVARCHAR(255) NULL,
@@ -34,7 +34,7 @@ BEGIN
         UpdatedAt            DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME()
     );
 
-    CREATE INDEX IX_temp_login_users_Email
-        ON dbo.temp_login_users (Email);
+    CREATE INDEX IX_login_users_Email
+        ON dbo.login_users (Email);
 END;
 GO

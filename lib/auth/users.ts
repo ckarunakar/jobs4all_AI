@@ -1,7 +1,7 @@
 /**
  * Login-user store (Auth.js identities). SERVER-SIDE ONLY.
  * --------------------------------------------------------------------------
- * Reads/writes ITJC_SCRAPPER.dbo.temp_login_users via the existing pooled
+ * Reads/writes ITJC_SCRAPPER.dbo.login_users via the existing pooled
  * connection. Every value is a bound parameter — no user input is ever
  * concatenated into SQL. Passwords are only ever handled as bcrypt hashes here;
  * this module never sees or stores plaintext.
@@ -10,7 +10,7 @@
 import "server-only";
 import { getPool, sql } from "@/lib/db/sqlServer";
 
-const USERS_TABLE = "ITJC_SCRAPPER.dbo.temp_login_users";
+const USERS_TABLE = "ITJC_SCRAPPER.dbo.login_users";
 
 export interface LoginUser {
   id: number;

@@ -14,7 +14,7 @@ const MAX_BYTES = 5 * 1024 * 1024; // 5 MB
 const ACCEPT = ".pdf,.docx";
 
 /**
- * Resume upload — real upload to SQL Server (dbo.temp_tbl_resume_upload) via
+ * Resume upload — real upload to SQL Server (dbo.resume_upload) via
  * /api/resume-upload. Name/email come from the profile store; the DB row ID is
  * kept on each ResumeFileRef so the resume can later be read by AI for scoring.
  */
