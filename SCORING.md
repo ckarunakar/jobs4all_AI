@@ -74,12 +74,18 @@ ANTHROPIC_MODEL=claude-haiku-4-5
 
 ## How to score
 
-- **Lazy (automatic):** the swipe page scores the current + next two cards as you reach them,
-  cached so re-renders never re-call. Cards show "AI scoring…" then update.
-- **Single job:** `POST /api/scoring/score-job` `{ "jobId": "s-001", "forceRefresh": false }`
-- **Batch:** `POST /api/scoring/score-batch` `{ "jobIds": ["s-001","s-002"] }`
-  (concurrency-limited to 2, capped at 20). The dashboard's **Score all jobs** button uses this.
-- **Re-score:** the job detail panel has a **Re-score** button (`forceRefresh: true`).
+- **Manual, user-triggered scoring:** there is no automatic/lazy scoring on card view — the
+  swipe page's **"Score top N jobs with AI"** button (`SCORE_TOP_N` in
+  [`lib/config.ts`](lib/config.ts), currently 10) is what scores jobs, using the signed-in
+  session's (email-fallback) latest uploaded resume. Results attach to each job as
+  `careerOpsScore`; until scored, the job detail modal shows "Not scored yet".
+- **Single job:** `POST /api/scoring/score-job` `{ "jobId": "...", "forceRefresh": false }` —
+  same real flow (session identity, DB cache) for one job; exists as an API with no current
+  UI caller.
+- **Batch:** `POST /api/scoring/score-batch` `{ "jobIds": ["...", "..."] }` (concurrency-limited
+  to 10, capped at 10 jobs per call) — this is what the swipe page's **Score top N jobs with
+  AI** button calls, DB-cached in `career_ops_scores`.
+- **Re-score:** pass `forceRefresh: true` to either route to bypass the cache.
 
 Both routes also accept an optional `profile` (the app's editable profile) that enriches the
 candidate; the primary signal is always the signed-in user's latest uploaded resume, resolved
@@ -95,9 +101,9 @@ Swap [`scoreCache.ts`](lib/scoring/scoreCache.ts) for a DB table later (the
 
 ## Cost controls
 
-Cache; lazy (only visible cards) scoring; concurrency limit 2; batch cap 20; job/profile
-truncation (12k chars each); cheapest model by default; `forceRefresh` only on explicit
-re-score. No scoring on every render.
+Cache; manual, user-triggered scoring only (never automatic); concurrency limit 10; batch cap
+10 jobs per call; job/profile truncation (12k chars each); cheapest model by default;
+`forceRefresh` only on explicit re-score. No scoring on card view or page load.
 
 ## Future hooks
 
