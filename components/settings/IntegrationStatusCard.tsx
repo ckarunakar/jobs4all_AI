@@ -2,13 +2,13 @@ import type { LucideIcon } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
-type StatusTone = "mock" | "waiting" | "live" | "disabled";
+type StatusTone = "unconfigured" | "waiting" | "live" | "disabled";
 
 const TONE: Record<
   StatusTone,
   { variant: React.ComponentProps<typeof Badge>["variant"]; dot: string }
 > = {
-  mock: { variant: "caution", dot: "var(--caution)" },
+  unconfigured: { variant: "caution", dot: "var(--caution)" },
   waiting: { variant: "info", dot: "var(--info)" },
   live: { variant: "recommended", dot: "var(--recommended)" },
   disabled: { variant: "default", dot: "var(--low)" },
