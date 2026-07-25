@@ -4,7 +4,7 @@
  * swipe profile. Replace freely; it's clearly a demo placeholder.
  */
 
-import { DEFAULT_SWIPE_PROFILE } from "@/lib/mockData/swipeProfile";
+import { DEFAULT_SWIPE_PROFILE } from "@/lib/swipe/defaultProfile";
 import { toCandidateProfile } from "./adapters";
 import type { CandidateProfile } from "./types";
 

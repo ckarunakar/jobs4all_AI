@@ -18,7 +18,7 @@ import {
   useState,
 } from "react";
 import { MOCK_SWIPE_JOBS } from "@/lib/mockData/swipeJobs";
-import { DEFAULT_SWIPE_PROFILE } from "@/lib/mockData/swipeProfile";
+import { DEFAULT_SWIPE_PROFILE } from "@/lib/swipe/defaultProfile";
 import { RECOMMEND_THRESHOLD } from "@/lib/careerOps/scoreUtils";
 import { swipeJobScore } from "@/lib/swipe/jobScore";
 import { SCORE_TOP_N, USE_REAL_JOBS } from "@/lib/config";
