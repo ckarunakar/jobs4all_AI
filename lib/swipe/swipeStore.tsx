@@ -152,8 +152,6 @@ interface SwipeStore {
   ) => Promise<{ ok: boolean; count: number; error: string | null }>;
   /** Clear filters and reload the default feed. */
   clearJobFilters: () => void;
-  /** Dev/testing: wipe the user's seen-job history, then reload the feed. */
-  clearSeenJobs: () => Promise<{ ok: boolean; error?: string }>;
   /** Score the first 10 jobs with AI, then show only those, ranked by score. */
   scoreTopJobs: () => Promise<ScoreTopJobsResult>;
   reset: () => void;
@@ -295,35 +293,6 @@ export function SwipeStoreProvider({
     },
     [setStatus, markSeen],
   );
-
-  // Dev/testing: wipe this user's seen history so jobs can resurface, then
-  // reload the (now larger) feed. NOT part of Reset.
-  const clearSeenJobs = useCallback(async (): Promise<{
-    ok: boolean;
-    error?: string;
-  }> => {
-    setFiltering(true);
-    try {
-      const res = await fetch("/api/jobs/seen", { method: "DELETE" });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok || !data?.ok) {
-        return { ok: false, error: data?.error ?? "Failed to clear history" };
-      }
-      markedSeenRef.current.clear();
-      const jobsRes = await fetchJobs(jobFilters);
-      setJobs(jobsRes.jobs);
-      setSource(jobsRes.source);
-      setError(jobsRes.error);
-      return { ok: true };
-    } catch (err) {
-      return {
-        ok: false,
-        error: err instanceof Error ? err.message : "Failed to clear history",
-      };
-    } finally {
-      setFiltering(false);
-    }
-  }, [jobFilters]);
 
   const setNotes = useCallback((jobId: string, value: string) => {
     setNotesState((prev) => ({ ...prev, [jobId]: value }));
@@ -498,7 +467,6 @@ export function SwipeStoreProvider({
     updateJobFilters,
     loadFilteredJobs,
     clearJobFilters,
-    clearSeenJobs,
     scoreTopJobs,
     reset,
     metrics,
