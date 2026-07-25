@@ -1,7 +1,7 @@
 /**
  * Map a DB `JobListing` into the swipe UI's `SwipeJob`.
- * Real jobs are NOT AI-scored in v1, so they get a neutral placeholder score;
- * lazy AI scoring is intentionally gated off for them (see scoresClient).
+ * Jobs get a neutral placeholder score until the user runs AI scoring
+ * ("Score top jobs with AI"), which attaches `careerOpsScore`.
  */
 
 import { getScoreLabel } from "@/lib/careerOps/scoreUtils";

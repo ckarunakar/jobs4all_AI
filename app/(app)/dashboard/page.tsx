@@ -24,7 +24,7 @@ import { swipeJobScore } from "@/lib/swipe/jobScore";
 import { useSwipeInteractions } from "@/components/swipe/SwipeInteractionsProvider";
 import { RECOMMEND_THRESHOLD } from "@/lib/careerOps/scoreUtils";
 
-export default function Demo2DashboardPage() {
+export default function DashboardPage() {
   const { jobs, metrics, hydrated } = useSwipeStore();
   const { openDetail } = useSwipeInteractions();
 

@@ -81,7 +81,7 @@ function Chip({
   );
 }
 
-export default function Demo2ProfilePage() {
+export default function ProfilePage() {
   const { profile, updateProfile } = useSwipeStore();
   const { toast } = useToast();
   const [saved, setSaved] = useState(false);

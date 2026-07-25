@@ -23,7 +23,7 @@ const SCORE_MIN: Record<ScoreFilter, number> = {
   review: 2.5,
 };
 
-export default function Demo2ApplicationsPage() {
+export default function ApplicationsPage() {
   const { jobs, hydrated } = useSwipeStore();
   const [status, setStatus] = useState<"all" | SwipeJobStatus>("all");
   const [score, setScore] = useState<ScoreFilter>("all");

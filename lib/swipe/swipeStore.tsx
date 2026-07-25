@@ -1,9 +1,8 @@
 "use client";
 
 /**
- * Swipe demo store (Demo 2) — MOCK PERSISTENCE.
- * Client-side store for the swipe app. Persists job statuses, notes, and the
- * profile to localStorage.
+ * Swipe store — client-side state for the swipe app. Persists job statuses,
+ * notes, and the profile to localStorage.
  *
  * TODO(backend): swap localStorage for API calls; keep this action surface.
  */

@@ -14,11 +14,11 @@
  *  - Profile sources (cv.md, config/profile.yml, modes/_profile.md).
  *  - A strict human-in-the-loop rule: the system NEVER auto-submits.
  *
- * NOTE: Nothing here calls Career-Ops. Real wiring happens behind the mock
- * adapter (see lib/careerOps/swipeAdapter.ts).
+ * NOTE: Nothing here calls Career-Ops directly — these are the shared shapes
+ * the scoring service and UI exchange.
  */
 
-/** A single fit score on the demo's 1.0–5.0 scale. */
+/** A single fit score on the 1.0–5.0 scale. */
 export type CareerOpsScore = number; // 1.0 – 5.0
 
 /**
@@ -133,7 +133,7 @@ export interface ResumeProfile {
   /** Which uploaded resume is the default for applications. */
   primaryResumeId?: string;
 
-  // --- Optional fields used by the swipe demo (Demo 2) ---
+  // --- Optional fields used by the swipe app ---
   /** Specific target-role tags (e.g. "ML Intern", "Backend New Grad"). */
   targetRoles?: string[];
   /** Preferred tech-stack chips that influence fit. */
@@ -158,7 +158,7 @@ export interface ResumeFileRef {
   label: string;
   fileName: string;
   uploadedAt: string;
-  /** TODO(backend): set true once real PDF parsing is wired up. */
+  /** True once resume text has been extracted for AI scoring. */
   parsed: boolean;
   /** Row ID in dbo.temp_tbl_resume_upload once uploaded to SQL Server. */
   dbId?: number;

@@ -4,8 +4,8 @@
  * Stores evaluations in data/job-scores.json keyed by inputHash, so we never
  * re-call the model for an unchanged job + profile + prompt + model.
  *
- * TODO(backend): swap this module for a DB-backed store (see SCORE.md for the
- * suggested JobScores table). The getCached/setCached signatures are the seam.
+ * TODO(backend): swap this module for a DB-backed store (see SCORING.md). The
+ * getCached/setCached signatures are the seam.
  */
 
 import { promises as fs } from "fs";
