@@ -1,26 +1,150 @@
 @import "tailwindcss";
 
+/*
+  ITJobCafe — flat, light design tokens (see types/design.md).
+  Confident reduction: zero artificial depth (no shadows/blur), bold color
+  blocks, geometric purity, typography-led hierarchy. Tokens are centralized
+  here so components stay color-literal-free.
+*/
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Surfaces */
+  --background: #ffffff; /* Pure white canvas */
+  --surface: #f3f4f6; /* Gray 100 — secondary blocks */
+  --card: #ffffff; /* White cards on gray sections */
+  --card-hover: #f3f4f6; /* Subtle tint on hover */
+  --elevated: #f3f4f6; /* Gray 100 — inputs / chips */
+  --border: #e5e7eb; /* Gray 200 — used sparingly */
+  --border-strong: #d1d5db; /* Gray 300 — bold borders */
+  --foreground: #111827; /* Gray 900 — sharp text */
+  --muted: #6b7280; /* Gray 500 */
+  --muted-foreground: #9ca3af; /* Gray 400 */
+
+  /* Brand */
+  --primary: #3b82f6; /* Blue 500 — the action color */
+  --primary-foreground: #ffffff;
+  --primary-soft: rgba(59, 130, 246, 0.1);
+  --secondary: #10b981; /* Emerald 500 — supporting accent */
+  --warning: #f59e0b; /* Amber 500 — highlights/badges */
+  /* `accent` is used widely as emphasis/link text; amber fails contrast on
+     white, so it maps to Blue 600 for readable accents. */
+  --accent: #2563eb;
+
+  /* Score / status semantics (light-mode solids) */
+  --excellent: #10b981; /* Emerald */
+  --recommended: #22c55e; /* Green 500 */
+  --caution: #f59e0b; /* Amber */
+  --low: #6b7280; /* Gray */
+  --danger: #ef4444; /* Red 500 */
+  --info: #3b82f6; /* Blue */
+
+  --ring: rgba(59, 130, 246, 0.6);
+  --radius: 0.5rem;
 }
 
 @theme inline {
   --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-card: var(--card);
+  --color-card-hover: var(--card-hover);
+  --color-elevated: var(--elevated);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-soft: var(--primary-soft);
+  --color-secondary: var(--secondary);
+  --color-warning: var(--warning);
+  --color-accent: var(--accent);
+
+  --color-excellent: var(--excellent);
+  --color-recommended: var(--recommended);
+  --color-caution: var(--caution);
+  --color-low: var(--low);
+  --color-danger: var(--danger);
+  --color-info: var(--info);
+
+  --color-ring: var(--ring);
+
+  --font-sans: var(--font-outfit), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+
+  --radius-lg: var(--radius);
+  --radius-md: calc(var(--radius) - 0.125rem);
+  --radius-sm: calc(var(--radius) - 0.25rem);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  color-scheme: light;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  letter-spacing: -0.011em;
+}
+
+/* Headings carry the hierarchy: bold + tight tracking (design.md). */
+h1,
+h2,
+h3 {
+  letter-spacing: -0.02em;
+}
+
+/*
+  Background decoration: subtle, flat geometric tints only — never colorful
+  blurred gradients. Used behind hero / section blocks.
+*/
+.bg-soft {
+  background-image: radial-gradient(
+    60rem 40rem at 85% -10%,
+    rgba(59, 130, 246, 0.06),
+    transparent 60%
+  );
+}
+
+.bg-grid {
+  background-image:
+    linear-gradient(to right, rgba(17, 24, 39, 0.04) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(17, 24, 39, 0.04) 1px, transparent 1px);
+  background-size: 56px 56px;
+}
+
+/* Light scrollbars. */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 9999px;
+  border: 2px solid var(--background);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #b6bcc6;
+}
+
+/* Flat skeleton: a plain gray block with a soft pulse (no shimmer gradient). */
+@keyframes pulse-soft {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+.skeleton {
+  background: #e5e7eb;
+  animation: pulse-soft 1.4s ease-in-out infinite;
 }
