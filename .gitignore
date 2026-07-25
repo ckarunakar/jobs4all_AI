@@ -42,3 +42,4 @@ next-env.d.ts
 
 # Local AI score cache (generated)
 /data/job-scores.json
+.superpowers/
