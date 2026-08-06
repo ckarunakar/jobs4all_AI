@@ -24,6 +24,8 @@
 - New action `scoreOneJob(jobId): Promise<{ ok: boolean; error?: string }>`: POST `/api/scoring/score-job` with `{ jobId, profile }`; on success merge that job's score in place. **No re-sort** — the card the user is reading must not move. De-dupe: no-op if that job already has a score or a single-job request for it is in flight.
 - Scoring state: keep the global `scoring` flag for the batch button; per-job scoring tracks in-flight ids (e.g. `scoringIds: Set<string>` exposed as a lookup) so each card can show its own spinner.
 
+Filters: applying/clearing filters replaces the deck with the server-filtered set (existing behavior), and `scoreNextJobs` always draws its candidates from the CURRENT deck — so post-filter batches score only filter-matching jobs. The store keeps a session-level `scoresById` map (jobId → CareerOpsAiScore, populated by every batch/single result) and re-attaches known scores whenever the deck is replaced (filter apply/clear, reset reload), so already-scored jobs that reappear in a filtered deck stay visibly scored.
+
 Main button (swipe page, logged in): label `Score next 10 jobs with AI`; spinner + disabled while batch runs; disabled with label `All jobs scored` when no unscored jobs remain in the deck.
 
 Error handling unchanged in kind: failures toast the server message (including "Upload a resume before scoring jobs."). Guests never reach these calls (UI gates them to /login), and the server 401s as a backstop.
