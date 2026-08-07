@@ -18,6 +18,7 @@ import { Dialog } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { CompanyLogo } from "./CompanyLogo";
+import { ScoreGate } from "./ScoreGate";
 import { ScoreMeter } from "./ScoreMeter";
 import { TagPill } from "./TagPill";
 import { ScoreBreakdown } from "@/components/jobs/ScoreBreakdown";
@@ -131,31 +132,28 @@ export function JobDetailModal({
 
       {/* Score */}
       <div className="mt-5 rounded-2xl border border-border bg-surface p-4">
-        {ai ? (
-          <>
-            <div className="mb-2 flex items-center gap-1.5 text-xs font-medium text-accent">
-              <Sparkles className="size-3" /> AI scored
-            </div>
-            <ScoreMeter score={ai.score} />
-            <div className="mt-3 flex flex-wrap items-center gap-1.5">
-              <Badge variant="primary">
-                {REC_LABELS[ai.recommendation] ?? ai.recommendation}
-              </Badge>
-              <Badge variant="outline">{ai.label}</Badge>
-            </div>
-            {ai.summary && (
-              <p className="mt-3 text-sm text-muted">{ai.summary}</p>
-            )}
-          </>
-        ) : (
-          <div className="py-2 text-center">
-            <p className="text-sm font-medium">Not scored yet</p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Use “Score top 10 jobs with AI” on the swipe screen to compare this
-              job against your uploaded resume.
-            </p>
-          </div>
-        )}
+        <ScoreGate
+          job={job}
+          scored={
+            ai ? (
+              <>
+                <div className="mb-2 flex items-center gap-1.5 text-xs font-medium text-accent">
+                  <Sparkles className="size-3" /> AI scored
+                </div>
+                <ScoreMeter score={ai.score} />
+                <div className="mt-3 flex flex-wrap items-center gap-1.5">
+                  <Badge variant="primary">
+                    {REC_LABELS[ai.recommendation] ?? ai.recommendation}
+                  </Badge>
+                  <Badge variant="outline">{ai.label}</Badge>
+                </div>
+                {ai.summary && (
+                  <p className="mt-3 text-sm text-muted">{ai.summary}</p>
+                )}
+              </>
+            ) : null
+          }
+        />
       </div>
 
       <div className="mt-6 space-y-5">

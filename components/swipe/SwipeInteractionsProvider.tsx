@@ -20,7 +20,7 @@ export function SwipeInteractionsProvider({
 }: {
   children: React.ReactNode;
 }) {
-  const { decide } = useSwipeStore();
+  const { decide, jobs } = useSwipeStore();
   const { toast } = useToast();
   const [detailJob, setDetailJob] = useState<SwipeJob | null>(null);
   const [applyJob, setApplyJob] = useState<SwipeJob | null>(null);
@@ -37,12 +37,18 @@ export function SwipeInteractionsProvider({
     setApplyOpen(true);
   };
 
+  // Resolve the live job from the store so scores that land after the modal
+  // opened (scoreOneJob / a batch) show up instead of the stale snapshot.
+  const liveDetailJob = detailJob
+    ? (jobs.find((j) => j.id === detailJob.id) ?? detailJob)
+    : null;
+
   return (
     <Ctx.Provider value={{ openDetail, openApply }}>
       {children}
 
       <JobDetailModal
-        job={detailJob}
+        job={liveDetailJob}
         open={detailOpen}
         onClose={() => setDetailOpen(false)}
         onSave={(job) => {
