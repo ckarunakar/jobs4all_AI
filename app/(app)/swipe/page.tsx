@@ -27,8 +27,9 @@ export default function SwipePage() {
     scoring,
     filtering,
     activeFilterCount,
+    isLoggedIn,
     decide,
-    scoreTopJobs,
+    scoreNextJobs,
   } = useSwipeStore();
   const { openDetail, openApply } = useSwipeInteractions();
   const { toast } = useToast();
@@ -36,14 +37,14 @@ export default function SwipePage() {
 
   const top = queue[0];
 
-  const handleScoreTop = async () => {
-    const res = await scoreTopJobs();
+  const handleScoreNext = async () => {
+    const res = await scoreNextJobs();
     if (!res.ok) {
       toast(res.error ?? "Scoring failed", "danger");
       return;
     }
     toast(
-      `Scored top ${res.count} · ${res.scored} new, ${res.cached} cached`,
+      `Scored ${res.count} jobs · ${res.scored} new, ${res.cached} cached`,
       "success",
     );
   };
@@ -78,6 +79,7 @@ export default function SwipePage() {
 
   const reviewed = metrics.reviewed;
   const total = metrics.total;
+  const hasUnscored = jobs.some((j) => j.status === "new" && !j.careerOpsScore);
 
   return (
     <SwipeShell flush headerActions={<JobFilterButton />}>
@@ -101,23 +103,34 @@ export default function SwipePage() {
             />
           </div>
 
-          {/* Manual, cost-controlled AI scoring of the first 10 real jobs. */}
+          {/* Manual, cost-controlled AI scoring — 10 unscored jobs per click. */}
           {hydrated && jobs.length > 0 && (
             <div className="mt-3">
-              <Button
-                onClick={handleScoreTop}
-                disabled={scoring}
-                className="w-full sm:w-auto"
-              >
-                {scoring ? (
-                  <Loader2 className="size-4 animate-spin" />
-                ) : (
-                  <Sparkles className="size-4" />
-                )}
-                {scoring
-                  ? `Scoring top ${SCORE_TOP_N}…`
-                  : `Score top ${SCORE_TOP_N} jobs with AI`}
-              </Button>
+              {isLoggedIn ? (
+                <Button
+                  onClick={handleScoreNext}
+                  disabled={scoring || !hasUnscored}
+                  className="w-full sm:w-auto"
+                >
+                  {scoring ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <Sparkles className="size-4" />
+                  )}
+                  {scoring
+                    ? `Scoring next ${SCORE_TOP_N}…`
+                    : hasUnscored
+                      ? `Score next ${SCORE_TOP_N} jobs with AI`
+                      : "All jobs scored"}
+                </Button>
+              ) : (
+                <Link href="/login" className="inline-block w-full sm:w-auto">
+                  <Button className="w-full">
+                    <Sparkles className="size-4" />
+                    Log in to get AI ratings
+                  </Button>
+                </Link>
+              )}
             </div>
           )}
         </div>

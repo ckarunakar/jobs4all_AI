@@ -90,6 +90,23 @@ function withStatuses(
   return jobs.map((j) => ({ ...j, status: statuses[j.id] ?? j.status }));
 }
 
+/**
+ * Deck order after a batch: scored-but-unswiped first (best score first),
+ * unscored unswiped next (original order), swiped jobs after (order there is
+ * irrelevant — the queue only reads status "new").
+ */
+function sortScoredFirst(list: SwipeJob[]): SwipeJob[] {
+  const scoredNew = list.filter((j) => j.status === "new" && j.careerOpsScore);
+  const unscoredNew = list.filter(
+    (j) => j.status === "new" && !j.careerOpsScore,
+  );
+  const rest = list.filter((j) => j.status !== "new");
+  scoredNew.sort(
+    (a, b) => (b.careerOpsScore?.score ?? 0) - (a.careerOpsScore?.score ?? 0),
+  );
+  return [...scoredNew, ...unscoredNew, ...rest];
+}
+
 // v2: profile now starts empty (was the "Jordan Lee" sample profile in v1).
 // Bumping the key discards old persisted state so the blank profile takes effect.
 const STORAGE_KEY = "itjobcafe.swipe.v2";
@@ -100,7 +117,7 @@ interface Persisted {
   profile: ResumeProfile;
 }
 
-export interface ScoreTopJobsResult {
+export interface ScoreNextJobsResult {
   ok: boolean;
   error?: string;
   scored?: number;
@@ -113,10 +130,14 @@ interface SwipeStore {
   profile: ResumeProfile;
   notes: Record<string, string>;
   hydrated: boolean;
+  /** True when a session exists. Gates seen-history sync and score UI. */
+  isLoggedIn: boolean;
   /** Non-null when the jobs feed failed to load. */
   error: string | null;
-  /** True while the manual "Score top 10" batch is running. */
+  /** True while a batch scoring of new jobs is running. */
   scoring: boolean;
+  /** Ids with a single-job scoring request in flight. */
+  scoringJobIds: Set<string>;
   /** Currently-applied job filters. */
   jobFilters: JobFilterState;
   /** Number of active filters (for the filter-button badge). */
@@ -138,8 +159,10 @@ interface SwipeStore {
   ) => Promise<{ ok: boolean; count: number; error: string | null }>;
   /** Clear filters and reload the default feed. */
   clearJobFilters: () => void;
-  /** Score the first 10 jobs with AI, then show only those, ranked by score. */
-  scoreTopJobs: () => Promise<ScoreTopJobsResult>;
+  /** Score the next 10 unscored queue jobs; scored jobs float to the front. */
+  scoreNextJobs: () => Promise<ScoreNextJobsResult>;
+  /** Score one job in place (no deck re-sort). */
+  scoreOneJob: (jobId: string) => Promise<{ ok: boolean; error?: string }>;
   reset: () => void;
   metrics: {
     total: number;
@@ -171,10 +194,13 @@ const SEEN_ACTION: Record<SwipeDecision, string> = {
 export function SwipeStoreProvider({
   children,
   sessionEmail,
+  isLoggedIn = false,
 }: {
   children: React.ReactNode;
   /** Logged-in email — seeded onto the profile so uploads/scoring use it. */
   sessionEmail?: string;
+  /** True when a session exists. Gates seen-history sync and score UI. */
+  isLoggedIn?: boolean;
 }) {
   const [jobs, setJobs] = useState<SwipeJob[]>([]);
   const [notes, setNotesState] = useState<Record<string, string>>({});
@@ -182,6 +208,26 @@ export function SwipeStoreProvider({
   const [hydrated, setHydrated] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [scoring, setScoring] = useState(false);
+  const [scoringJobIds, setScoringJobIds] = useState<Set<string>>(new Set());
+  // Session-level score memory: survives deck replacement (filters/reset) so
+  // already-scored jobs stay visibly scored when they reappear.
+  const scoresRef = useRef<Map<string, CareerOpsAiScore>>(new Map());
+  // Synchronous guard against same-frame double-clicks racing scoreOneJob:
+  // state updates aren't visible until the next render, so this ref catches
+  // a second call before setScoringJobIds would.
+  const inFlightSingleRef = useRef<Set<string>>(new Set());
+
+  /** Re-attach any known scores to a freshly fetched job list. */
+  const withKnownScores = useCallback(
+    (list: SwipeJob[]): SwipeJob[] =>
+      list.map((j) => {
+        const known = scoresRef.current.get(j.id);
+        return known && !j.careerOpsScore
+          ? { ...j, careerOpsScore: known }
+          : j;
+      }),
+    [],
+  );
   const [jobFilters, setJobFilters] = useState<JobFilterState>({});
   const [filtering, setFiltering] = useState(false);
 
@@ -214,7 +260,7 @@ export function SwipeStoreProvider({
     // Then load the base jobs (the SQL feed) and re-apply statuses.
     fetchJobs().then((res) => {
       if (cancelled) return;
-      setJobs(withStatuses(res.jobs, statuses));
+      setJobs(withKnownScores(withStatuses(res.jobs, statuses)));
       setError(res.error);
       setHydrated(true);
     });
@@ -222,7 +268,7 @@ export function SwipeStoreProvider({
     return () => {
       cancelled = true;
     };
-  }, [sessionEmail]);
+  }, [sessionEmail, withKnownScores]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
   useEffect(() => {
@@ -249,7 +295,7 @@ export function SwipeStoreProvider({
   // jobId === job_reference.
   const markedSeenRef = useRef<Set<string>>(new Set());
   const markSeen = useCallback((jobId: string, action: string) => {
-    if (!jobId) return;
+    if (!isLoggedIn || !jobId) return;
     const key = `${jobId}:${action}`;
     if (markedSeenRef.current.has(key)) return;
     markedSeenRef.current.add(key);
@@ -260,7 +306,7 @@ export function SwipeStoreProvider({
     }).catch((err) => {
       console.warn("[swipe] failed to mark job seen:", err);
     });
-  }, []);
+  }, [isLoggedIn]);
 
   const decide = useCallback(
     (jobId: string, decision: SwipeDecision) => {
@@ -288,18 +334,27 @@ export function SwipeStoreProvider({
     [],
   );
 
-  const scoreTopJobs = useCallback(async (): Promise<ScoreTopJobsResult> => {
+  const scoreNextJobs = useCallback(async (): Promise<ScoreNextJobsResult> => {
     if (scoring) return { ok: false, error: "Already scoring…" };
-    const topJobs = jobs.slice(0, SCORE_TOP_N);
-    if (topJobs.length === 0) return { ok: false, error: "No jobs to score." };
+    const candidates = jobs
+      .filter((j) => j.status === "new" && !j.careerOpsScore && !scoringJobIds.has(j.id))
+      .slice(0, SCORE_TOP_N);
+    if (candidates.length === 0) {
+      return { ok: false, error: "All jobs are scored." };
+    }
 
     setScoring(true);
+    setScoringJobIds((prev) => {
+      const next = new Set(prev);
+      for (const j of candidates) next.add(j.id);
+      return next;
+    });
     try {
       const res = await fetch("/api/scoring/score-batch", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          jobIds: topJobs.map((j) => j.id),
+          jobIds: candidates.map((j) => j.id),
           profile,
         }),
       });
@@ -312,19 +367,19 @@ export function SwipeStoreProvider({
       for (const r of data.results ?? []) {
         if (r?.jobId && r?.careerOpsScore) byId.set(r.jobId, r.careerOpsScore);
       }
+      byId.forEach((score, id) => scoresRef.current.set(id, score));
 
-      // Keep only the scored jobs, attach the score, rank desc, reset the deck.
-      const ranked = topJobs
-        .map((j) => ({
-          ...j,
-          careerOpsScore: byId.get(j.id),
-          status: "new" as SwipeJobStatus,
-        }))
-        .sort(
-          (a, b) =>
-            (b.careerOpsScore?.score ?? -1) - (a.careerOpsScore?.score ?? -1),
-        );
-      setJobs(ranked);
+      // Merge scores in (nothing is discarded), then float scored jobs to the
+      // front of the queue ranked by fit.
+      setJobs((prev) =>
+        sortScoredFirst(
+          prev.map((j) =>
+            byId.has(j.id)
+              ? { ...j, careerOpsScore: byId.get(j.id) }
+              : j,
+          ),
+        ),
+      );
 
       return {
         ok: true,
@@ -338,9 +393,64 @@ export function SwipeStoreProvider({
         error: err instanceof Error ? err.message : "Scoring failed",
       };
     } finally {
+      setScoringJobIds((prev) => {
+        const next = new Set(prev);
+        for (const j of candidates) next.delete(j.id);
+        return next;
+      });
       setScoring(false);
     }
-  }, [scoring, jobs, profile]);
+  }, [scoring, jobs, profile, scoringJobIds]);
+
+  // Score one job in place (per-card "Ask AI to score"). Deliberately NO
+  // re-sort: the card being read must not move.
+  const scoreOneJob = useCallback(
+    async (jobId: string): Promise<{ ok: boolean; error?: string }> => {
+      if (!jobId) return { ok: false, error: "Missing job id" };
+      if (scoringJobIds.has(jobId)) {
+        return { ok: false, error: "Already scoring this job." };
+      }
+      if (inFlightSingleRef.current.has(jobId)) {
+        return { ok: false, error: "Already scoring this job." };
+      }
+      if (jobs.find((j) => j.id === jobId)?.careerOpsScore) {
+        return { ok: true };
+      }
+      inFlightSingleRef.current.add(jobId);
+      setScoringJobIds((prev) => new Set(prev).add(jobId));
+      try {
+        const res = await fetch("/api/scoring/score-job", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ jobId, profile }),
+        });
+        const data = await res.json();
+        if (!res.ok || !data.ok || !data.careerOpsScore) {
+          return { ok: false, error: data?.error ?? "Scoring failed" };
+        }
+        scoresRef.current.set(jobId, data.careerOpsScore);
+        setJobs((prev) =>
+          prev.map((j) =>
+            j.id === jobId ? { ...j, careerOpsScore: data.careerOpsScore } : j,
+          ),
+        );
+        return { ok: true };
+      } catch (err) {
+        return {
+          ok: false,
+          error: err instanceof Error ? err.message : "Scoring failed",
+        };
+      } finally {
+        inFlightSingleRef.current.delete(jobId);
+        setScoringJobIds((prev) => {
+          const next = new Set(prev);
+          next.delete(jobId);
+          return next;
+        });
+      }
+    },
+    [jobs, profile, scoringJobIds],
+  );
 
   // Update the draft filter state locally (no fetch until Apply).
   const updateJobFilters = useCallback((patch: Partial<JobFilterState>) => {
@@ -358,14 +468,14 @@ export function SwipeStoreProvider({
       setFiltering(true);
       try {
         const res = await fetchJobs(active);
-        setJobs(res.jobs);
+        setJobs(withKnownScores(res.jobs));
         setError(res.error);
         return { ok: true, count: res.jobs.length, error: res.error };
       } finally {
         setFiltering(false);
       }
     },
-    [],
+    [withKnownScores],
   );
 
   // Clear filters and reload the default (unfiltered) feed.
@@ -374,11 +484,11 @@ export function SwipeStoreProvider({
     setFiltering(true);
     fetchJobs()
       .then((res) => {
-        setJobs(res.jobs);
+        setJobs(withKnownScores(res.jobs));
         setError(res.error);
       })
       .finally(() => setFiltering(false));
-  }, []);
+  }, [withKnownScores]);
 
   const reset = useCallback(() => {
     setNotesState({});
@@ -388,11 +498,11 @@ export function SwipeStoreProvider({
     // Re-load fresh default jobs with no persisted statuses / no filters.
     fetchJobs()
       .then((res) => {
-        setJobs(res.jobs);
+        setJobs(withKnownScores(res.jobs));
         setError(res.error);
       })
       .finally(() => setFiltering(false));
-  }, []);
+  }, [withKnownScores]);
 
   const queue = useMemo(
     () => jobs.filter((j) => j.status === "new"),
@@ -428,8 +538,10 @@ export function SwipeStoreProvider({
     profile,
     notes,
     hydrated,
+    isLoggedIn,
     error,
     scoring,
+    scoringJobIds,
     jobFilters,
     activeFilterCount,
     filtering,
@@ -442,7 +554,8 @@ export function SwipeStoreProvider({
     updateJobFilters,
     loadFilteredJobs,
     clearJobFilters,
-    scoreTopJobs,
+    scoreNextJobs,
+    scoreOneJob,
     reset,
     metrics,
   };
@@ -455,4 +568,9 @@ export function useSwipeStore(): SwipeStore {
   if (!ctx)
     throw new Error("useSwipeStore must be used within a SwipeStoreProvider");
   return ctx;
+}
+
+/** Like useSwipeStore, but returns null outside a provider (landing page). */
+export function useSwipeStoreOptional(): SwipeStore | null {
+  return useContext(Ctx);
 }

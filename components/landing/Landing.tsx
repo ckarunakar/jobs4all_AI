@@ -76,8 +76,8 @@ const FEATURES = [
 
 export function Landing({ loggedIn = false }: { loggedIn?: boolean }) {
   const previewJob = PREVIEW_JOB;
-  const ctaHref = loggedIn ? "/swipe" : "/login";
-  const ctaLabel = loggedIn ? "Open the app" : "Log in to get started";
+  const ctaHref = "/swipe";
+  const ctaLabel = loggedIn ? "Open the app" : "Browse jobs";
 
   return (
     <>

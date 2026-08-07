@@ -8,19 +8,20 @@ submitted automatically.
 
 ## Features
 
-- **Auth** — email/password (bcrypt) and optional Google OAuth via NextAuth v5.
+- **Auth** — email/password (bcrypt) and optional Google OAuth via NextAuth v5. Browsing the job feed is public; an account is needed for AI scoring, seen-history sync, and the dashboard/tracker/profile pages.
 - **Swipe feed** — jobs read server-side from SQL Server with filters (type,
   city, recency); per-user seen-history so reviewed jobs don't resurface.
 - **Resume upload** — .pdf/.docx stored in SQL Server; text extracted
   (pdf-parse / mammoth) for scoring.
-- **AI scoring** — "Score top jobs with AI" compares the latest resume against
-  the top feed jobs via DeepSeek or Anthropic (server-side only, DB-cached).
+- **AI scoring** — "Score next 10 jobs with AI" scores the next 10 unscored
+  feed jobs against the user's latest uploaded resume via DeepSeek or
+  Anthropic (server-side only, DB-cached).
 - **Tracker** — interested / saved / applied pipeline with notes.
 
 ## Architecture
 
 - Next.js 16 App Router. Pages live in `app/`, with the authenticated app
-  under the `app/(app)/` group (layout enforces login).
+  under the `app/(app)/` group (the feed is public; account pages live in a nested (protected) group whose layout enforces login).
 - API routes in `app/api/` (auth, jobs, resume-upload, scoring) are the only
   code that touches secrets or the DB.
 - `lib/db/*` + `lib/jobs/*` — pooled mssql access (read-only job feed; writes

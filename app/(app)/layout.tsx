@@ -1,12 +1,11 @@
-import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { SwipeStoreProvider } from "@/lib/swipe/swipeStore";
 import { ToastProvider } from "@/components/ui/toast";
 import { SwipeInteractionsProvider } from "@/components/swipe/SwipeInteractionsProvider";
 
 /**
- * App shell — protects the whole (app) route group. Unauthenticated users are
- * redirected to /login. Wraps store + toasts + AI scores + shared modals.
+ * App shell — public. Guests can browse the feed; account pages live under
+ * the nested (protected) group, whose layout redirects to /login.
  */
 export default async function AppLayout({
   children,
@@ -14,10 +13,12 @@ export default async function AppLayout({
   children: React.ReactNode;
 }) {
   const session = await auth();
-  if (!session?.user) redirect("/login");
 
   return (
-    <SwipeStoreProvider sessionEmail={session.user.email ?? undefined}>
+    <SwipeStoreProvider
+      sessionEmail={session?.user?.email ?? undefined}
+      isLoggedIn={Boolean(session?.user)}
+    >
       <ToastProvider>
         <SwipeInteractionsProvider>{children}</SwipeInteractionsProvider>
       </ToastProvider>

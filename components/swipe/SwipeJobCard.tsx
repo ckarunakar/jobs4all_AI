@@ -13,6 +13,7 @@ import {
   X,
 } from "lucide-react";
 import { CompanyLogo } from "./CompanyLogo";
+import { ScoreGate } from "./ScoreGate";
 import { ScoreMeter } from "./ScoreMeter";
 import { TagPill } from "./TagPill";
 import { Badge } from "@/components/ui/badge";
@@ -30,7 +31,6 @@ interface SwipeJobCardProps {
 export function SwipeJobCard({ job, onDetails, dragHint }: SwipeJobCardProps) {
   // Real Career-Ops AI score when scored, else the neutral placeholder values.
   const ai = job.careerOpsScore;
-  const score = ai?.score ?? job.score;
   const strengths = ai?.pros ?? job.strengths;
   const warning =
     ai?.warnings?.[0] ??
@@ -99,19 +99,22 @@ export function SwipeJobCard({ job, onDetails, dragHint }: SwipeJobCardProps) {
 
         {/* Score */}
         <div className="mt-4 rounded-2xl border border-border bg-surface p-4">
-          <div className="mb-1.5 flex items-center justify-end">
-            {ai ? (
-              <span className="flex items-center gap-1 text-[11px] font-medium text-accent">
-                <Sparkles className="size-3" />
-                AI scored
-              </span>
-            ) : (
-              <span className="text-[11px] font-medium text-muted-foreground">
-                Not scored yet
-              </span>
-            )}
-          </div>
-          <ScoreMeter score={score} />
+          <ScoreGate
+            job={job}
+            scored={
+              ai ? (
+                <>
+                  <div className="mb-1.5 flex items-center justify-end">
+                    <span className="flex items-center gap-1 text-[11px] font-medium text-accent">
+                      <Sparkles className="size-3" />
+                      AI scored
+                    </span>
+                  </div>
+                  <ScoreMeter score={ai.score} />
+                </>
+              ) : null
+            }
+          />
         </div>
 
         {/* Match reasons (AI) — or the job description for real, unscored jobs */}
