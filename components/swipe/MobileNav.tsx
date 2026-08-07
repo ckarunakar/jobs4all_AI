@@ -2,17 +2,23 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { SWIPE_NAV_ITEMS } from "./swipe-nav-items";
+import { LogIn } from "lucide-react";
+import { SWIPE_NAV_ITEMS, type SwipeNavItem } from "./swipe-nav-items";
+import { useSwipeStore } from "@/lib/swipe/swipeStore";
 import { cn } from "@/lib/utils/cn";
+
+const LOGIN_ITEM: SwipeNavItem = { label: "Log in", href: "/login", icon: LogIn };
 
 /** Bottom tab bar — the primary navigation for the mobile-first swipe flow. */
 export function MobileNav() {
   const pathname = usePathname();
+  const { isLoggedIn } = useSwipeStore();
+  const items = isLoggedIn ? SWIPE_NAV_ITEMS : [...SWIPE_NAV_ITEMS, LOGIN_ITEM];
 
   return (
     <nav className="fixed inset-x-0 bottom-0 z-30 border-t-2 border-border bg-background">
       <div className="mx-auto flex max-w-2xl items-stretch justify-around">
-        {SWIPE_NAV_ITEMS.map((item) => {
+        {items.map((item) => {
           const active = pathname === item.href;
           return (
             <Link

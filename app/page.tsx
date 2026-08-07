@@ -15,9 +15,9 @@ export default async function LandingPage() {
       <header className="sticky top-0 z-30 border-b-2 border-border bg-background">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4">
           <Logo />
-          <Link href={loggedIn ? "/swipe" : "/login"}>
+          <Link href="/swipe">
             <Button size="sm">
-              {loggedIn ? "Open the app" : "Log in"}
+              {loggedIn ? "Open the app" : "Browse jobs"}
               <ArrowRight className="size-4" />
             </Button>
           </Link>

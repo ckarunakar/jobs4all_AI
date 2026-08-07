@@ -26,7 +26,7 @@ export function SwipeShell({
   headerActions,
   children,
 }: SwipeShellProps) {
-  const { reset } = useSwipeStore();
+  const { reset, isLoggedIn } = useSwipeStore();
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
@@ -46,6 +46,11 @@ export function SwipeShell({
             <RotateCcw className="size-4" />
             Reset
           </Button>
+          {!isLoggedIn && (
+            <Link href="/login">
+              <Button size="sm">Log in</Button>
+            </Link>
+          )}
         </div>
       </header>
 
