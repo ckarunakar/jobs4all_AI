@@ -397,20 +397,48 @@ export function SwipeStoreProvider({
   useEffect(() => {
     if (!hydrated) return;
     try {
-      const statuses = Object.fromEntries(jobs.map((j) => [j.id, j.status]));
-      localStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify({ statuses, notes, profile }),
-      );
+      if (isLoggedIn) {
+        // Logged in: statuses/notes live server-side, not in localStorage —
+        // don't let this effect clobber the on-disk guest-era payload with
+        // {} (e.g. because the one-time import hasn't run/succeeded yet, or
+        // the tracked fetch failed). Preserve whatever is already stored so
+        // a failed import still has data to retry with next load; refresh
+        // only the profile.
+        let prevStatuses: Record<string, SwipeJobStatus> = {};
+        let prevNotes: Record<string, string> = {};
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY);
+          if (raw) {
+            const parsed = JSON.parse(raw) as Persisted;
+            prevStatuses = parsed.statuses ?? {};
+            prevNotes = parsed.notes ?? {};
+          }
+        } catch {
+          // ignore corrupt state
+        }
+        localStorage.setItem(
+          STORAGE_KEY,
+          JSON.stringify({ statuses: prevStatuses, notes: prevNotes, profile }),
+        );
+      } else {
+        const statuses = Object.fromEntries(jobs.map((j) => [j.id, j.status]));
+        localStorage.setItem(
+          STORAGE_KEY,
+          JSON.stringify({ statuses, notes, profile }),
+        );
+      }
     } catch {
       // storage unavailable — non-fatal
     }
-  }, [jobs, notes, profile, hydrated]);
+  }, [jobs, notes, profile, hydrated, isLoggedIn]);
 
   // Sync one job's full state (status + notes + snapshot) for the logged-in
   // user (fire-and-forget; never blocks the swipe). MERGE-on-server means a
-  // lost write self-heals on the job's next touch. Deduped so React
-  // double-fires don't re-POST. jobId === job_reference.
+  // lost write self-heals on the job's next touch. Deduped per in-flight
+  // request — NOT permanently — so React double-fires don't re-POST, while a
+  // later touch (including a bounce back to the same status) or a retry
+  // after a failed POST still fires once the earlier request has settled.
+  // jobId === job_reference.
   const syncedRef = useRef<Set<string>>(new Set());
   const syncJobState = useCallback(
     (job: SwipeJob, status: SwipeJobStatus, notesValue?: string) => {
@@ -432,9 +460,13 @@ export function SwipeStoreProvider({
             url: job.applicationUrl || undefined,
           },
         }),
-      }).catch((err) => {
-        console.warn("[swipe] failed to sync job state:", err);
-      });
+      })
+        .catch((err) => {
+          console.warn("[swipe] failed to sync job state:", err);
+        })
+        .finally(() => {
+          syncedRef.current.delete(key);
+        });
     },
     [isLoggedIn],
   );
