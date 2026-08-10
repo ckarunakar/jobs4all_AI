@@ -84,8 +84,9 @@ grows the new reads/writes; job mapping reuses `lib/db/jobsRepository.ts` helper
    read resolves live job data by reference (recently swiped jobs are almost always
    still in the scraper table). The client truncates to the 500 most recent entries;
    the server rejects larger payloads with 400. Inserts only rows that don't already
-   exist for the user — existing server rows always win. Returns
-   `{ ok, imported, skipped }`.
+   exist for the user — existing server rows always win. Existing rows whose `Notes`
+   are NULL do get the imported notes filled in (statuses are never overwritten).
+   Returns `{ ok, imported, skipped }`.
 
 ## Section 3 — Store & client changes (`lib/swipe/swipeStore.tsx`)
 
@@ -96,7 +97,9 @@ and metrics work unchanged — they already filter that array for `status !== "n
   1. Read localStorage (profile as today; statuses/notes only as import source).
   2. If the import flag `itjobcafe.swipe.imported.<email>` is absent and localStorage
      has statuses/notes → `POST /api/jobs/seen/import` with `{ jobReference, status,
-     notes? }` entries (no snapshots — see Section 2). Set the flag only on success.
+     notes? }` entries (no snapshots — see Section 2). Set the flag only on success. On
+     success the stored statuses/notes are cleared (profile kept), so on a shared
+     browser only the first account to log in absorbs the guest pipeline.
   3. Fetch `/api/jobs` and `/api/jobs/tracked` in parallel. `jobs` = tracked jobs
      (server status + notes) + feed jobs (all `"new"`). No overlap is possible — the
      feed excludes seen jobs server-side. Notes state seeds from the tracked response.

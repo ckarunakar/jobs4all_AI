@@ -109,8 +109,14 @@ export interface ImportEntry {
 }
 
 /**
- * One-time bulk import of localStorage state. Insert-only: existing server
- * rows always win (no WHEN MATCHED clause). Returns how many rows landed.
+ * One-time bulk import of localStorage state. Insert-only for status —
+ * existing server rows' LastAction always wins (no status is ever
+ * overwritten). Additionally rescues notes into existing rows whose Notes
+ * are still NULL: pre-feature logged-in users already had a row per swipe
+ * (written by the old seen-marking) with no server-side notes column, so
+ * without this those rows would match on insert and silently drop the
+ * user's notes with no way to recover them (the import is one-shot,
+ * flag-gated). Returns how many rows landed.
  */
 export async function importJobStates(
   loginUserId: number,
@@ -133,10 +139,14 @@ export async function importJobStates(
            ON  target.LoginUserID = source.LoginUserID
            AND target.JobReference = source.JobReference
            AND target.SourceTable = source.SourceTable
+         WHEN MATCHED AND target.Notes IS NULL AND @Notes IS NOT NULL THEN UPDATE SET
+           Notes = @Notes, UpdatedAt = SYSUTCDATETIME()
          WHEN NOT MATCHED THEN INSERT
            (LoginUserID, JobReference, SourceTable, LastAction, Notes)
            VALUES (@LoginUserID, @JobReference, @SourceTable, @Status, @Notes);`,
       );
+    // rowsAffected also counts matched rows whose NULL notes got rescued, so
+    // `imported` means "rows the import wrote to" (insert or notes rescue).
     imported += result.rowsAffected[0] ?? 0;
   }
   return { imported, skipped: entries.length - imported };

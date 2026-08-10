@@ -325,7 +325,11 @@ export function SwipeStoreProvider({
     // One-time import of localStorage pipeline state into the account.
     // Existing server rows win; the flag is only set on success so a failed
     // import retries next load. Cap 500 (localStorage has no timestamps, so
-    // "most recent" is unknowable — first 500 it is).
+    // "most recent" is unknowable — first 500 it is). On success the guest
+    // payload is absorbed by this account: the stored statuses/notes are
+    // cleared (profile kept) so a later account — or a later guest session —
+    // on this shared browser starts fresh instead of re-inheriting the same
+    // pipeline (the import flag is per-email; the payload itself is not).
     async function maybeImport(): Promise<void> {
       if (!isLoggedIn || !sessionEmail) return;
       const importKey = `itjobcafe.swipe.imported.${sessionEmail}`;
@@ -352,6 +356,21 @@ export function SwipeStoreProvider({
           if (!res.ok) return; // no flag — retry next load
         }
         localStorage.setItem(importKey, "1");
+        // Absorb the guest-era payload into this account: clear the stored
+        // statuses/notes (profile untouched) so this pipeline isn't
+        // re-imported by the next account to log in on this browser.
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY);
+          if (raw) {
+            const parsed = JSON.parse(raw) as Persisted;
+            localStorage.setItem(
+              STORAGE_KEY,
+              JSON.stringify({ statuses: {}, notes: {}, profile: parsed.profile }),
+            );
+          }
+        } catch {
+          // ignore corrupt state — nothing to clear
+        }
       } catch (err) {
         console.warn("[swipe] pipeline import failed:", err);
       }
