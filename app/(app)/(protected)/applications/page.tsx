@@ -6,6 +6,7 @@ import { Inbox, SlidersHorizontal } from "lucide-react";
 import { SwipeShell } from "@/components/swipe/SwipeShell";
 import { SwipePipelineBoard } from "@/components/swipe/SwipePipelineBoard";
 import { EmptyState } from "@/components/shared/EmptyState";
+import { PipelineErrorBanner } from "@/components/shared/PipelineErrorBanner";
 import { Select } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -50,6 +51,7 @@ export default function ApplicationsPage() {
       description="Track every job you've acted on — you stay in control"
     >
       <div className="space-y-4">
+        <PipelineErrorBanner />
         {/* Filters */}
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex items-center gap-1.5 text-xs text-muted">

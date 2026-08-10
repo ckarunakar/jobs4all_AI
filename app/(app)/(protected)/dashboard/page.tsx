@@ -15,6 +15,7 @@ import { SwipeShell } from "@/components/swipe/SwipeShell";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { FitScoreCard } from "@/components/dashboard/FitScoreCard";
 import { ProfileCompletionCard } from "@/components/swipe/ProfileCompletionCard";
+import { PipelineErrorBanner } from "@/components/shared/PipelineErrorBanner";
 import { SwipeJobRow } from "@/components/swipe/SwipeJobRow";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -60,6 +61,7 @@ export default function DashboardPage() {
       description="Your swipe activity and high-fit roles"
     >
       <div className="space-y-5">
+        <PipelineErrorBanner />
         {/* Stats */}
         <div className="grid grid-cols-2 gap-3">
           {!hydrated ? (
