@@ -304,3 +304,83 @@ export async function fetchJobById(id: string): Promise<JobListing | null> {
   const row = result.recordset?.[0];
   return row ? mapRow(row) : null;
 }
+
+/** A tracked (pipeline) job: live listing when the scraper still has it,
+ *  else rebuilt from the snapshot captured at write time. */
+export interface TrackedJobListing {
+  listing: JobListing;
+  status: string;
+  notes: string | null;
+}
+
+/**
+ * The user's pipeline: seen rows with a status, newest-updated first, capped
+ * at 500, LEFT JOINed to the live jobs table. Rows whose job vanished from
+ * the scraper table fall back to the snapshot (empty description).
+ */
+export async function fetchTrackedJobListings(
+  loginUserId: number,
+): Promise<TrackedJobListing[]> {
+  const pool = await getPool();
+  const result = await pool
+    .request()
+    .input("loginUserId", sql.Int, loginUserId)
+    .query<RawRow & {
+      seenJobReference?: unknown;
+      seenStatus?: unknown;
+      seenNotes?: unknown;
+      snapTitle?: unknown;
+      snapCompany?: unknown;
+      snapLocation?: unknown;
+      snapUrl?: unknown;
+    }>(
+      `SELECT TOP 500
+         s.JobReference  AS seenJobReference,
+         s.LastAction    AS seenStatus,
+         s.Notes         AS seenNotes,
+         s.JobTitle      AS snapTitle,
+         s.JobCompany    AS snapCompany,
+         s.JobLocation   AS snapLocation,
+         s.JobUrl        AS snapUrl,
+         j.job_reference AS id,
+         j.Title         AS title,
+         j.company       AS company,
+         j.city          AS city,
+         j.state         AS state,
+         j.zip           AS zip,
+         j.country       AS country,
+         j.Location      AS locationRaw,
+         j.url           AS url,
+         j.job_type      AS jobType,
+         j.posted_at     AS postedAt,
+         j.Isremote      AS isRemote,
+         j.category      AS category,
+         j.description   AS description
+       FROM ITJC_SCRAPPER.dbo.user_job_seen s
+       LEFT JOIN ${JOBS_TABLE} j ON j.job_reference = s.JobReference
+       WHERE s.LoginUserID = @loginUserId
+         AND s.SourceTable = 'temp_tbl_Scrap_jobs'
+         AND s.LastAction IS NOT NULL
+       ORDER BY s.UpdatedAt DESC`,
+    );
+
+  const out: TrackedJobListing[] = [];
+  for (const row of Array.from(result.recordset)) {
+    const status = str(row.seenStatus);
+    const reference = str(row.seenJobReference);
+    if (!status || !reference) continue;
+    // Live row when the join hit (mapRow needs id + title); snapshot fallback.
+    const listing: JobListing = mapRow(row) ?? {
+      id: reference,
+      jobReference: reference,
+      title: str(row.snapTitle) ?? "(no longer listed)",
+      company: str(row.snapCompany) ?? "Unknown Company",
+      location: str(row.snapLocation) ?? "Location not specified",
+      url: str(row.snapUrl),
+      description: "",
+      source: "sql-server",
+    };
+    out.push({ listing, status, notes: str(row.seenNotes) ?? null });
+  }
+  return out;
+}

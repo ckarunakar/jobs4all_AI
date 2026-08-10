@@ -1,10 +1,12 @@
 /**
- * Per-user "seen jobs" history. SERVER-SIDE ONLY.
+ * Per-user pipeline state ("seen jobs" + status + notes). SERVER-SIDE ONLY.
  * --------------------------------------------------------------------------
- * Records which jobs a logged-in user has swiped/reviewed so the feed can skip
- * them next time. Writes to ITJC_SCRAPPER.dbo.user_job_seen via the pooled
- * connection. All values are bound parameters. Reads happen in SQL (NOT EXISTS
- * in the jobs query) — we never pull a user's whole seen list into Node.
+ * One row per (user, job, source) in ITJC_SCRAPPER.dbo.user_job_seen records
+ * that the user swiped/reviewed the job (drives the feed's NOT EXISTS
+ * exclusion) AND their pipeline status, notes, and a job snapshot captured at
+ * write time (so tracked jobs outlive scraper churn). All values are bound
+ * parameters. COALESCE keeps existing values when a field isn't sent; empty
+ * string deliberately overwrites (clears notes).
  */
 
 import "server-only";
@@ -15,31 +17,53 @@ const SEEN_TABLE = "ITJC_SCRAPPER.dbo.user_job_seen";
 /** The scrap-jobs source table (matches the seen row's SourceTable). */
 export const SCRAP_SOURCE_TABLE = "temp_tbl_Scrap_jobs";
 
-export type SeenAction =
-  | "viewed"
-  | "rejected"
+/** SwipeJobStatus minus "new" — the values LastAction may hold. */
+export type PipelineStatus =
+  | "interested"
   | "saved"
+  | "ready"
   | "applied"
-  | "skipped"
-  | "interested";
+  | "interview"
+  | "rejected"
+  | "skipped";
 
-export const SEEN_ACTIONS: readonly SeenAction[] = [
-  "viewed",
-  "rejected",
-  "saved",
-  "applied",
-  "skipped",
+export const PIPELINE_STATUSES: readonly PipelineStatus[] = [
   "interested",
+  "saved",
+  "ready",
+  "applied",
+  "interview",
+  "rejected",
+  "skipped",
 ];
 
+export function isPipelineStatus(v: unknown): v is PipelineStatus {
+  return (
+    typeof v === "string" &&
+    (PIPELINE_STATUSES as readonly string[]).includes(v)
+  );
+}
+
+/** Job fields snapshotted at write time (tracker fallback after churn). */
+export interface JobSnapshot {
+  title?: string;
+  company?: string;
+  location?: string;
+  url?: string;
+}
+
 /**
- * Mark a job as seen for a user (idempotent upsert). Repeated calls just update
- * LastAction/UpdatedAt — never a duplicate row (unique index enforces it too).
+ * Upsert a user's state for one job (idempotent MERGE). Missing fields keep
+ * their existing values (COALESCE); the unique index prevents duplicates.
  */
-export async function markJobSeen(args: {
+export async function upsertJobState(args: {
   loginUserId: number;
   jobReference: string;
-  action?: string | null;
+  /** Pipeline status → LastAction. Null/undefined keeps the existing value. */
+  status?: string | null;
+  /** Null/undefined keeps existing notes; "" clears them. */
+  notes?: string | null;
+  snapshot?: JobSnapshot;
   sourceTable?: string;
 }): Promise<void> {
   const pool = await getPool();
@@ -48,7 +72,12 @@ export async function markJobSeen(args: {
     .input("LoginUserID", sql.Int, args.loginUserId)
     .input("JobReference", sql.NVarChar(255), args.jobReference)
     .input("SourceTable", sql.NVarChar(100), args.sourceTable ?? SCRAP_SOURCE_TABLE)
-    .input("LastAction", sql.NVarChar(50), args.action ?? null)
+    .input("Status", sql.NVarChar(50), args.status ?? null)
+    .input("Notes", sql.NVarChar(sql.MAX), args.notes ?? null)
+    .input("JobTitle", sql.NVarChar(500), args.snapshot?.title ?? null)
+    .input("JobCompany", sql.NVarChar(500), args.snapshot?.company ?? null)
+    .input("JobLocation", sql.NVarChar(500), args.snapshot?.location ?? null)
+    .input("JobUrl", sql.NVarChar(2000), args.snapshot?.url ?? null)
     .query(
       `MERGE ${SEEN_TABLE} WITH (HOLDLOCK) AS target
          USING (SELECT @LoginUserID AS LoginUserID, @JobReference AS JobReference,
@@ -57,9 +86,58 @@ export async function markJobSeen(args: {
          AND target.JobReference = source.JobReference
          AND target.SourceTable = source.SourceTable
        WHEN MATCHED THEN UPDATE SET
-         LastAction = @LastAction, UpdatedAt = SYSUTCDATETIME()
+         LastAction  = COALESCE(@Status, target.LastAction),
+         Notes       = COALESCE(@Notes, target.Notes),
+         JobTitle    = COALESCE(@JobTitle, target.JobTitle),
+         JobCompany  = COALESCE(@JobCompany, target.JobCompany),
+         JobLocation = COALESCE(@JobLocation, target.JobLocation),
+         JobUrl      = COALESCE(@JobUrl, target.JobUrl),
+         UpdatedAt   = SYSUTCDATETIME()
        WHEN NOT MATCHED THEN INSERT
-         (LoginUserID, JobReference, SourceTable, LastAction)
-         VALUES (@LoginUserID, @JobReference, @SourceTable, @LastAction);`,
+         (LoginUserID, JobReference, SourceTable, LastAction, Notes,
+          JobTitle, JobCompany, JobLocation, JobUrl)
+         VALUES (@LoginUserID, @JobReference, @SourceTable, @Status, @Notes,
+                 @JobTitle, @JobCompany, @JobLocation, @JobUrl);`,
     );
+}
+
+/** One localStorage entry offered for import. */
+export interface ImportEntry {
+  jobReference: string;
+  status: PipelineStatus;
+  notes?: string;
+}
+
+/**
+ * One-time bulk import of localStorage state. Insert-only: existing server
+ * rows always win (no WHEN MATCHED clause). Returns how many rows landed.
+ */
+export async function importJobStates(
+  loginUserId: number,
+  entries: ImportEntry[],
+): Promise<{ imported: number; skipped: number }> {
+  const pool = await getPool();
+  let imported = 0;
+  for (const e of entries) {
+    const result = await pool
+      .request()
+      .input("LoginUserID", sql.Int, loginUserId)
+      .input("JobReference", sql.NVarChar(255), e.jobReference)
+      .input("SourceTable", sql.NVarChar(100), SCRAP_SOURCE_TABLE)
+      .input("Status", sql.NVarChar(50), e.status)
+      .input("Notes", sql.NVarChar(sql.MAX), e.notes ?? null)
+      .query(
+        `MERGE ${SEEN_TABLE} WITH (HOLDLOCK) AS target
+           USING (SELECT @LoginUserID AS LoginUserID, @JobReference AS JobReference,
+                         @SourceTable AS SourceTable) AS source
+           ON  target.LoginUserID = source.LoginUserID
+           AND target.JobReference = source.JobReference
+           AND target.SourceTable = source.SourceTable
+         WHEN NOT MATCHED THEN INSERT
+           (LoginUserID, JobReference, SourceTable, LastAction, Notes)
+           VALUES (@LoginUserID, @JobReference, @SourceTable, @Status, @Notes);`,
+      );
+    imported += result.rowsAffected[0] ?? 0;
+  }
+  return { imported, skipped: entries.length - imported };
 }
