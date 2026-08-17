@@ -60,7 +60,7 @@ export function ApplicationReviewModal({
   open,
   onClose,
 }: ApplicationReviewModalProps) {
-  const { profile, markApplied, setNotes, notes } = useSwipeStore();
+  const { profile, markApplied, notes } = useSwipeStore();
   const { toast } = useToast();
   const [selectedResume, setSelectedResume] = useState(
     profile.primaryResumeId ?? profile.resumes[0]?.id,
@@ -93,8 +93,7 @@ export function ApplicationReviewModal({
   const allChecked = CHECKLIST.every((c) => checks[c.key]);
 
   const handleApplied = () => {
-    setNotes(job.id, draftNotes);
-    markApplied(job.id);
+    markApplied(job.id, draftNotes);
     toast("Marked as applied", "success");
     onClose();
   };

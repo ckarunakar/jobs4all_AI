@@ -124,6 +124,16 @@ The Profile page can upload a real resume (`.pdf`/`.docx`) to SQL Server — the
   `SELECT ID, FirstName, LastName, Email, ResumeName, FileType, DATALENGTH(Resume) AS Bytes, uploadDate
    FROM ITJC_SCRAPPER.dbo.resume_upload ORDER BY ID DESC;`
 
+## Pipeline state (write + read-back)
+
+Logged-in users' swipe statuses and notes persist in `user_job_seen`
+(`LastAction` = full pipeline status, plus `Notes` and snapshot columns —
+run `database/migrate/add-pipeline-state-to-user-job-seen.sql` once).
+`POST /api/jobs/seen` upserts one job's state; `GET /api/jobs/tracked`
+returns the pipeline (TOP 500, newest first, live join with snapshot
+fallback); `POST /api/jobs/seen/import` is the one-time localStorage import
+on login. Guests stay localStorage-only.
+
 ## Career-Ops AI scoring (manual, top 10)
 
 On `/swipe` a **"Score top 10 jobs with AI"** button compares the user's most recent uploaded
@@ -157,8 +167,10 @@ at 10; DB-cached so re-clicks don't re-call the model).
 
 - The **job feed is read-only** — only `SELECT` runs against `ITJC`. The **only writes** in the whole
   app are in `ITJC_SCRAPPER`: the resume upload (`INSERT`/`UPDATE ResumeText` on
-  `resume_upload`) and the AI score cache (`MERGE` into `career_ops_scores`). All are
-  parameterized. No delete/truncate, and the stored procedure that processes jobs is **never** called.
+  `resume_upload`), the AI score cache (`MERGE` into `career_ops_scores`), and the
+  per-user pipeline state (`MERGE` into `user_job_seen` — status, notes, and a
+  title/company/location/url snapshot per swiped job). All are parameterized.
+  No delete/truncate, and the stored procedure that processes jobs is **never** called.
 - `lib/db/*` import `server-only`, so DB code can never be bundled into client JS. The DB routes
   are dynamic server routes (`ƒ`), and credentials are never logged (only server/db/host).
 

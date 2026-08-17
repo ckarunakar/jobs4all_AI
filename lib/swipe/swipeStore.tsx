@@ -20,7 +20,10 @@ import { DEFAULT_SWIPE_PROFILE } from "@/lib/swipe/defaultProfile";
 import { RECOMMEND_THRESHOLD } from "@/lib/careerOps/scoreUtils";
 import { swipeJobScore } from "@/lib/swipe/jobScore";
 import { SCORE_TOP_N } from "@/lib/config";
-import { jobListingsToSwipeJobs } from "@/lib/jobs/jobListingToSwipeJob";
+import {
+  jobListingsToSwipeJobs,
+  jobListingToSwipeJob,
+} from "@/lib/jobs/jobListingToSwipeJob";
 import type { ResumeProfile } from "@/lib/careerOps/types";
 import type { CareerOpsAiScore } from "@/lib/careerOps/aiScore";
 import type { JobListing } from "@/types/jobListing";
@@ -82,6 +85,54 @@ async function fetchJobs(filters: JobFilterState = {}): Promise<{
   }
 }
 
+/** LastAction values the tracker accepts (SwipeJobStatus minus "new"). */
+const TRACKED_STATUSES: readonly SwipeJobStatus[] = [
+  "interested",
+  "saved",
+  "ready",
+  "applied",
+  "interview",
+  "rejected",
+  "skipped",
+];
+
+function isTrackedStatus(v: string): v is SwipeJobStatus {
+  return (TRACKED_STATUSES as readonly string[]).includes(v);
+}
+
+/** Fetch the logged-in user's server-side pipeline (statuses + notes). */
+async function fetchTrackedJobs(): Promise<{
+  jobs: SwipeJob[];
+  notes: Record<string, string>;
+  error: string | null;
+}> {
+  try {
+    const res = await fetch("/api/jobs/tracked");
+    const data = (await res.json()) as {
+      ok?: boolean;
+      jobs?: Array<{ job: JobListing; status: string; notes: string | null }>;
+      error?: string;
+    };
+    if (!res.ok || !data.ok || !Array.isArray(data.jobs)) {
+      throw new Error(data.error || `Request failed (${res.status})`);
+    }
+    const notes: Record<string, string> = {};
+    const jobs: SwipeJob[] = [];
+    for (const entry of data.jobs) {
+      if (!isTrackedStatus(entry.status)) continue;
+      const sj = jobListingToSwipeJob(entry.job);
+      sj.status = entry.status;
+      if (entry.notes) notes[sj.id] = entry.notes;
+      jobs.push(sj);
+    }
+    return { jobs, notes, error: null };
+  } catch (err) {
+    const message =
+      err instanceof Error ? err.message : "Failed to load pipeline";
+    return { jobs: [], notes: {}, error: message };
+  }
+}
+
 /** Re-apply persisted per-job statuses (keyed by id) onto a fresh job list. */
 function withStatuses(
   jobs: SwipeJob[],
@@ -134,6 +185,8 @@ interface SwipeStore {
   isLoggedIn: boolean;
   /** Non-null when the jobs feed failed to load. */
   error: string | null;
+  /** Non-null when the saved pipeline failed to load. */
+  pipelineError: string | null;
   /** True while a batch scoring of new jobs is running. */
   scoring: boolean;
   /** Ids with a single-job scoring request in flight. */
@@ -149,7 +202,7 @@ interface SwipeStore {
   decide: (jobId: string, decision: SwipeDecision) => void;
   setStatus: (jobId: string, status: SwipeJobStatus) => void;
   setNotes: (jobId: string, notes: string) => void;
-  markApplied: (jobId: string) => void;
+  markApplied: (jobId: string, notes?: string) => void;
   updateProfile: (patch: Partial<ResumeProfile>) => void;
   /** Merge a patch into the draft filter state (does not fetch). */
   updateJobFilters: (patch: Partial<JobFilterState>) => void;
@@ -184,13 +237,6 @@ const DECISION_STATUS: Record<SwipeDecision, SwipeJobStatus> = {
   save: "saved",
 };
 
-/** Swipe decision → the action recorded in the user's seen history. */
-const SEEN_ACTION: Record<SwipeDecision, string> = {
-  interested: "interested",
-  skip: "skipped",
-  save: "saved",
-};
-
 export function SwipeStoreProvider({
   children,
   sessionEmail,
@@ -207,6 +253,8 @@ export function SwipeStoreProvider({
   const [profile, setProfile] = useState<ResumeProfile>(DEFAULT_SWIPE_PROFILE);
   const [hydrated, setHydrated] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Non-null when the server-side pipeline (tracked jobs) failed to load.
+  const [pipelineError, setPipelineError] = useState<string | null>(null);
   const [scoring, setScoring] = useState(false);
   const [scoringJobIds, setScoringJobIds] = useState<Set<string>>(new Set());
   // Session-level score memory: survives deck replacement (filters/reset) so
@@ -228,6 +276,22 @@ export function SwipeStoreProvider({
       }),
     [],
   );
+
+  /** Replace only the undecided ("new") portion of the deck; jobs the user
+   *  has acted on stay so the tracker survives filtering. */
+  const replaceDeck = useCallback(
+    (fetched: SwipeJob[]) => {
+      setJobs((prev) => {
+        const kept = prev.filter((j) => j.status !== "new");
+        const keptIds = new Set(kept.map((j) => j.id));
+        return withKnownScores([
+          ...kept,
+          ...fetched.filter((j) => !keptIds.has(j.id)),
+        ]);
+      });
+    },
+    [withKnownScores],
+  );
   const [jobFilters, setJobFilters] = useState<JobFilterState>({});
   const [filtering, setFiltering] = useState(false);
 
@@ -237,13 +301,14 @@ export function SwipeStoreProvider({
 
     // Read persisted statuses/notes/profile first (localStorage is sync).
     let statuses: Record<string, SwipeJobStatus> = {};
+    let storedNotes: Record<string, string> = {};
     let persistedProfile: Partial<ResumeProfile> | null = null;
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) {
         const parsed = JSON.parse(raw) as Persisted;
         statuses = parsed.statuses ?? {};
-        if (parsed.notes) setNotesState(parsed.notes);
+        storedNotes = parsed.notes ?? {};
         if (parsed.profile) persistedProfile = parsed.profile;
       }
     } catch {
@@ -257,76 +322,217 @@ export function SwipeStoreProvider({
       : DEFAULT_SWIPE_PROFILE;
     setProfile(sessionEmail ? { ...base, email: sessionEmail } : base);
 
-    // Then load the base jobs (the SQL feed) and re-apply statuses.
-    fetchJobs().then((res) => {
-      if (cancelled) return;
-      setJobs(withKnownScores(withStatuses(res.jobs, statuses)));
-      setError(res.error);
-      setHydrated(true);
-    });
+    // One-time import of localStorage pipeline state into the account.
+    // Existing server rows win; the flag is only set on success so a failed
+    // import retries next load. Cap 500 (localStorage has no timestamps, so
+    // "most recent" is unknowable — first 500 it is). On success the guest
+    // payload is absorbed by this account: the stored statuses/notes are
+    // cleared (profile kept) so a later account — or a later guest session —
+    // on this shared browser starts fresh instead of re-inheriting the same
+    // pipeline (the import flag is per-email; the payload itself is not).
+    async function maybeImport(): Promise<void> {
+      if (!isLoggedIn || !sessionEmail) return;
+      const importKey = `itjobcafe.swipe.imported.${sessionEmail}`;
+      try {
+        if (localStorage.getItem(importKey)) return;
+      } catch {
+        return;
+      }
+      const entries = Object.entries(statuses)
+        .filter(([, s]) => s !== "new")
+        .slice(0, 500)
+        .map(([jobReference, status]) => ({
+          jobReference,
+          status,
+          notes: storedNotes[jobReference] || undefined,
+        }));
+      try {
+        if (entries.length > 0) {
+          const res = await fetch("/api/jobs/seen/import", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ entries }),
+          });
+          if (!res.ok) return; // no flag — retry next load
+        }
+        localStorage.setItem(importKey, "1");
+        // Absorb the guest-era payload into this account: clear the stored
+        // statuses/notes (profile untouched) so this pipeline isn't
+        // re-imported by the next account to log in on this browser.
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY);
+          if (raw) {
+            const parsed = JSON.parse(raw) as Persisted;
+            localStorage.setItem(
+              STORAGE_KEY,
+              JSON.stringify({ statuses: {}, notes: {}, profile: parsed.profile }),
+            );
+          }
+        } catch {
+          // ignore corrupt state — nothing to clear
+        }
+      } catch (err) {
+        console.warn("[swipe] pipeline import failed:", err);
+      }
+    }
 
+    async function load(): Promise<void> {
+      if (isLoggedIn) {
+        await maybeImport();
+        const [feed, tracked] = await Promise.all([
+          fetchJobs(),
+          fetchTrackedJobs(),
+        ]);
+        if (cancelled) return;
+        // Server state wins: localStorage statuses are NOT applied. The feed
+        // excludes seen jobs server-side, so overlap is belt-and-braces only.
+        const trackedIds = new Set(tracked.jobs.map((j) => j.id));
+        setJobs(
+          withKnownScores([
+            ...tracked.jobs,
+            ...feed.jobs.filter((j) => !trackedIds.has(j.id)),
+          ]),
+        );
+        setNotesState(tracked.notes);
+        setError(feed.error);
+        setPipelineError(tracked.error);
+      } else {
+        const res = await fetchJobs();
+        if (cancelled) return;
+        setJobs(withKnownScores(withStatuses(res.jobs, statuses)));
+        setNotesState(storedNotes);
+        setError(res.error);
+      }
+      setHydrated(true);
+    }
+
+    void load();
     return () => {
       cancelled = true;
     };
-  }, [sessionEmail, withKnownScores]);
+  }, [sessionEmail, isLoggedIn, withKnownScores]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
   useEffect(() => {
     if (!hydrated) return;
     try {
-      const statuses = Object.fromEntries(jobs.map((j) => [j.id, j.status]));
-      localStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify({ statuses, notes, profile }),
-      );
+      if (isLoggedIn) {
+        // Logged in: statuses/notes live server-side, not in localStorage —
+        // don't let this effect clobber the on-disk guest-era payload with
+        // {} (e.g. because the one-time import hasn't run/succeeded yet, or
+        // the tracked fetch failed). Preserve whatever is already stored so
+        // a failed import still has data to retry with next load; refresh
+        // only the profile.
+        let prevStatuses: Record<string, SwipeJobStatus> = {};
+        let prevNotes: Record<string, string> = {};
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY);
+          if (raw) {
+            const parsed = JSON.parse(raw) as Persisted;
+            prevStatuses = parsed.statuses ?? {};
+            prevNotes = parsed.notes ?? {};
+          }
+        } catch {
+          // ignore corrupt state
+        }
+        localStorage.setItem(
+          STORAGE_KEY,
+          JSON.stringify({ statuses: prevStatuses, notes: prevNotes, profile }),
+        );
+      } else {
+        const statuses = Object.fromEntries(jobs.map((j) => [j.id, j.status]));
+        localStorage.setItem(
+          STORAGE_KEY,
+          JSON.stringify({ statuses, notes, profile }),
+        );
+      }
     } catch {
       // storage unavailable — non-fatal
     }
-  }, [jobs, notes, profile, hydrated]);
+  }, [jobs, notes, profile, hydrated, isLoggedIn]);
 
-  const setStatus = useCallback((jobId: string, status: SwipeJobStatus) => {
-    setJobs((prev) =>
-      prev.map((j) => (j.id === jobId ? { ...j, status } : j)),
-    );
-  }, []);
-
-  // Persist "job seen" for the logged-in user (fire-and-forget; never blocks the
-  // swipe). Deduped per (job, action) so React double-fires don't re-POST.
+  // Sync one job's full state (status + notes + snapshot) for the logged-in
+  // user (fire-and-forget; never blocks the swipe). MERGE-on-server means a
+  // lost write self-heals on the job's next touch. Deduped per in-flight
+  // request — NOT permanently — so React double-fires don't re-POST, while a
+  // later touch (including a bounce back to the same status) or a retry
+  // after a failed POST still fires once the earlier request has settled.
   // jobId === job_reference.
-  const markedSeenRef = useRef<Set<string>>(new Set());
-  const markSeen = useCallback((jobId: string, action: string) => {
-    if (!isLoggedIn || !jobId) return;
-    const key = `${jobId}:${action}`;
-    if (markedSeenRef.current.has(key)) return;
-    markedSeenRef.current.add(key);
-    void fetch("/api/jobs/seen", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ jobReference: jobId, action }),
-    }).catch((err) => {
-      console.warn("[swipe] failed to mark job seen:", err);
-    });
-  }, [isLoggedIn]);
+  const syncedRef = useRef<Set<string>>(new Set());
+  const syncJobState = useCallback(
+    (job: SwipeJob, status: SwipeJobStatus, notesValue?: string) => {
+      if (!isLoggedIn || !job.id || status === "new") return;
+      const key = `${job.id}:${status}:${notesValue ?? ""}`;
+      if (syncedRef.current.has(key)) return;
+      syncedRef.current.add(key);
+      void fetch("/api/jobs/seen", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          jobReference: job.id,
+          status,
+          notes: notesValue,
+          snapshot: {
+            title: job.title,
+            company: job.company,
+            location: job.location,
+            url: job.applicationUrl || undefined,
+          },
+        }),
+      })
+        .catch((err) => {
+          console.warn("[swipe] failed to sync job state:", err);
+        })
+        .finally(() => {
+          syncedRef.current.delete(key);
+        });
+    },
+    [isLoggedIn],
+  );
+
+  const setStatus = useCallback(
+    (jobId: string, status: SwipeJobStatus) => {
+      setJobs((prev) =>
+        prev.map((j) => (j.id === jobId ? { ...j, status } : j)),
+      );
+      const job = jobs.find((j) => j.id === jobId);
+      // Notes omitted → server keeps existing notes (COALESCE).
+      if (job) syncJobState(job, status);
+    },
+    [jobs, syncJobState],
+  );
 
   const decide = useCallback(
     (jobId: string, decision: SwipeDecision) => {
       setStatus(jobId, DECISION_STATUS[decision]);
-      markSeen(jobId, SEEN_ACTION[decision]);
     },
-    [setStatus, markSeen],
+    [setStatus],
   );
 
+  // Notes travel WITH the status in one POST — two racing requests could
+  // otherwise resurrect stale values via COALESCE.
   const markApplied = useCallback(
-    (jobId: string) => {
-      setStatus(jobId, "applied");
-      markSeen(jobId, "applied");
+    (jobId: string, notesValue?: string) => {
+      if (notesValue !== undefined) {
+        setNotesState((prev) => ({ ...prev, [jobId]: notesValue }));
+      }
+      setJobs((prev) =>
+        prev.map((j) => (j.id === jobId ? { ...j, status: "applied" } : j)),
+      );
+      const job = jobs.find((j) => j.id === jobId);
+      if (job) syncJobState(job, "applied", notesValue);
     },
-    [setStatus, markSeen],
+    [jobs, syncJobState],
   );
 
-  const setNotes = useCallback((jobId: string, value: string) => {
-    setNotesState((prev) => ({ ...prev, [jobId]: value }));
-  }, []);
+  const setNotes = useCallback(
+    (jobId: string, value: string) => {
+      setNotesState((prev) => ({ ...prev, [jobId]: value }));
+      const job = jobs.find((j) => j.id === jobId);
+      if (job && job.status !== "new") syncJobState(job, job.status, value);
+    },
+    [jobs, syncJobState],
+  );
 
   const updateProfile = useCallback(
     (patch: Partial<ResumeProfile>) =>
@@ -468,14 +674,14 @@ export function SwipeStoreProvider({
       setFiltering(true);
       try {
         const res = await fetchJobs(active);
-        setJobs(withKnownScores(res.jobs));
+        replaceDeck(res.jobs);
         setError(res.error);
         return { ok: true, count: res.jobs.length, error: res.error };
       } finally {
         setFiltering(false);
       }
     },
-    [withKnownScores],
+    [replaceDeck],
   );
 
   // Clear filters and reload the default (unfiltered) feed.
@@ -484,25 +690,43 @@ export function SwipeStoreProvider({
     setFiltering(true);
     fetchJobs()
       .then((res) => {
-        setJobs(withKnownScores(res.jobs));
+        replaceDeck(res.jobs);
         setError(res.error);
       })
       .finally(() => setFiltering(false));
-  }, [withKnownScores]);
+  }, [replaceDeck]);
 
   const reset = useCallback(() => {
     setNotesState({});
     setProfile(DEFAULT_SWIPE_PROFILE);
-    setJobFilters({}); // Reset also clears active filters.
+    setJobFilters({});
     setFiltering(true);
-    // Re-load fresh default jobs with no persisted statuses / no filters.
-    fetchJobs()
-      .then((res) => {
-        setJobs(withKnownScores(res.jobs));
-        setError(res.error);
-      })
-      .finally(() => setFiltering(false));
-  }, [withKnownScores]);
+    if (isLoggedIn) {
+      // Logged in: Reset re-syncs from the server — it does NOT clear the
+      // saved pipeline (there is deliberately no delete endpoint).
+      Promise.all([fetchJobs(), fetchTrackedJobs()])
+        .then(([feed, tracked]) => {
+          const trackedIds = new Set(tracked.jobs.map((j) => j.id));
+          setJobs(
+            withKnownScores([
+              ...tracked.jobs,
+              ...feed.jobs.filter((j) => !trackedIds.has(j.id)),
+            ]),
+          );
+          setNotesState(tracked.notes);
+          setError(feed.error);
+          setPipelineError(tracked.error);
+        })
+        .finally(() => setFiltering(false));
+    } else {
+      fetchJobs()
+        .then((res) => {
+          setJobs(withKnownScores(res.jobs));
+          setError(res.error);
+        })
+        .finally(() => setFiltering(false));
+    }
+  }, [isLoggedIn, withKnownScores]);
 
   const queue = useMemo(
     () => jobs.filter((j) => j.status === "new"),
@@ -540,6 +764,7 @@ export function SwipeStoreProvider({
     hydrated,
     isLoggedIn,
     error,
+    pipelineError,
     scoring,
     scoringJobIds,
     jobFilters,

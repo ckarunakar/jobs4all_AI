@@ -16,7 +16,7 @@ submitted automatically.
 - **AI scoring** — "Score next 10 jobs with AI" scores the next 10 unscored
   feed jobs against the user's latest uploaded resume via DeepSeek or
   Anthropic (server-side only, DB-cached).
-- **Tracker** — interested / saved / applied pipeline with notes.
+- **Tracker** — interested / saved / applied pipeline with notes; server-persisted for logged-in users (survives reloads and devices).
 
 ## Architecture
 
@@ -53,10 +53,11 @@ deploy time (renames in place, no data loss). The scraper-owned
 
 ## Known limitations
 
-- **Swipe/application state is per-browser.** Job statuses, notes, and the
-  profile persist to `localStorage` (`lib/swipe/swipeStore.tsx`), so they do
-  not follow the user across devices. Server-side persistence is the top
-  planned follow-up. (Seen-history and resumes ARE server-side already.)
+- **The profile is per-browser.** Job statuses and notes now persist
+  server-side for logged-in users (`user_job_seen`) and follow you across
+  devices; a one-time import preserves any pre-login localStorage state.
+  Guests still swipe against `localStorage` only, and the editable profile
+  (name, links, school, preferences) remains per-browser for everyone.
 - The AI score cache also has a local file layer (`data/job-scores.json`,
   gitignored) used by the scoring engine's file-cache seam; the real flow
   caches in the DB.
