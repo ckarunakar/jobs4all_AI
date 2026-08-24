@@ -32,8 +32,13 @@ const MAX_SKILLS = 3;
 const MAX_SKILL_LEN = 40;
 
 export function JobFilterButton() {
-  const { jobFilters, activeFilterCount, loadFilteredJobs, clearJobFilters } =
-    useSwipeStore();
+  const {
+    jobFilters,
+    activeFilterCount,
+    loadFilteredJobs,
+    clearJobFilters,
+    filtering,
+  } = useSwipeStore();
   const { toast } = useToast();
 
   const [open, setOpen] = useState(false);
@@ -100,7 +105,7 @@ export function JobFilterButton() {
     setCityMenuOpen(false);
   };
 
-  // Clean chips like the server will: trim, truncate, CI-dedupe, cap at 5.
+  // Clean chips like the server will: trim, truncate, CI-dedupe, cap at 3.
   const setSkills = (next: string[]) => {
     const seen = new Set<string>();
     const cleaned: string[] = [];
@@ -130,6 +135,7 @@ export function JobFilterButton() {
     };
     setOpen(false);
     const res = await loadFilteredJobs(next);
+    if (res.stale) return;
     if (res.ok) {
       toast(
         res.count > 0
@@ -174,14 +180,19 @@ export function JobFilterButton() {
         description="Filtering runs in SQL — only matching jobs are loaded."
         footer={
           <div className="flex flex-wrap items-center gap-2">
-            <Button variant="ghost" size="sm" onClick={clearAll}>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={clearAll}
+              disabled={filtering}
+            >
               Clear filters
             </Button>
             <div className="flex-1" />
             <Button variant="secondary" size="sm" onClick={() => setOpen(false)}>
               Cancel
             </Button>
-            <Button size="sm" onClick={applyFilters}>
+            <Button size="sm" onClick={applyFilters} disabled={filtering}>
               Apply filters
             </Button>
           </div>

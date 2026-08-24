@@ -212,7 +212,12 @@ interface SwipeStore {
   /** Apply filters: fetch matching jobs server-side and replace the deck. */
   loadFilteredJobs: (
     filters?: JobFilterState,
-  ) => Promise<{ ok: boolean; count: number; error: string | null }>;
+  ) => Promise<{
+    ok: boolean;
+    count: number;
+    error: string | null;
+    stale?: boolean;
+  }>;
   /** Clear filters and reload the default feed. */
   clearJobFilters: () => void;
   /** Score the next 10 unscored queue jobs; scored jobs float to the front. */
@@ -267,6 +272,9 @@ export function SwipeStoreProvider({
   // state updates aren't visible until the next render, so this ref catches
   // a second call before setScoringJobIds would.
   const inFlightSingleRef = useRef<Set<string>>(new Set());
+  // Monotonic id for filter fetches: a response only lands if it is still
+  // the newest request (filter queries can run ~25s — see the 2026-08-23 spec).
+  const filterReqRef = useRef(0);
 
   /** Re-attach any known scores to a freshly fetched job list. */
   const withKnownScores = useCallback(
@@ -671,17 +679,27 @@ export function SwipeStoreProvider({
   const loadFilteredJobs = useCallback(
     async (
       filters?: JobFilterState,
-    ): Promise<{ ok: boolean; count: number; error: string | null }> => {
+    ): Promise<{
+      ok: boolean;
+      count: number;
+      error: string | null;
+      stale?: boolean;
+    }> => {
+      const reqId = ++filterReqRef.current;
       const active = filters ?? {};
       if (filters) setJobFilters(filters);
       setFiltering(true);
       try {
         const res = await fetchJobs(active);
+        if (reqId !== filterReqRef.current) {
+          // A newer filter request superseded this one — drop the response.
+          return { ok: true, count: 0, error: null, stale: true };
+        }
         replaceDeck(res.jobs);
         setError(res.error);
         return { ok: true, count: res.jobs.length, error: res.error };
       } finally {
-        setFiltering(false);
+        if (reqId === filterReqRef.current) setFiltering(false);
       }
     },
     [replaceDeck],
@@ -689,14 +707,18 @@ export function SwipeStoreProvider({
 
   // Clear filters and reload the default (unfiltered) feed.
   const clearJobFilters = useCallback(() => {
+    const reqId = ++filterReqRef.current;
     setJobFilters({});
     setFiltering(true);
     fetchJobs()
       .then((res) => {
+        if (reqId !== filterReqRef.current) return;
         replaceDeck(res.jobs);
         setError(res.error);
       })
-      .finally(() => setFiltering(false));
+      .finally(() => {
+        if (reqId === filterReqRef.current) setFiltering(false);
+      });
   }, [replaceDeck]);
 
   const reset = useCallback(() => {

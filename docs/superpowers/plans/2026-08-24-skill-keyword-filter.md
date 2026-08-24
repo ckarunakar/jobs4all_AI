@@ -31,12 +31,12 @@
 
 **Interfaces:**
 - Consumes: existing `JobFilters`, `fetchJobListings` WHERE-builder pattern (`request.input` + `where.push`), route's `clean`/parse helpers.
-- Produces: `JobFilters.skills?: string[]` (cleaned, max 5×40); `GET /api/jobs?skill=a&skill=b` filters results. Task 2 relies on the param name `skill` and the cleaning rules.
+- Produces: `JobFilters.skills?: string[]` (cleaned, max 3×40); `GET /api/jobs?skill=a&skill=b` filters results. Task 2 relies on the param name `skill` and the cleaning rules.
 
 - [ ] **Step 1: `types/jobListing.ts` — add the filter field.** In the `JobFilters` interface, after the `jobType?: string;` line add:
 
 ```ts
-  /** Whole-word skill keywords (max 5) — matches if ANY appears in title/description. */
+  /** Whole-word skill keywords (max 3) — matches if ANY appears in title/description. */
   skills?: string[];
 ```
 
@@ -83,10 +83,10 @@ function skillPattern(skill: string): string {
 - [ ] **Step 4: `app/api/jobs/route.ts` — parse the repeated param.** Below the `clean()` helper add:
 
 ```ts
-const MAX_SKILLS = 5;
+const MAX_SKILLS = 3;
 const MAX_SKILL_LEN = 40;
 
-/** Clean repeated ?skill= params: trim, truncate to 40, dedupe (CI), cap 5. */
+/** Clean repeated ?skill= params: trim, truncate to 40, dedupe (CI), cap 3. */
 function parseSkills(values: string[]): string[] | undefined {
   const out: string[] = [];
   const seen = new Set<string>();
@@ -162,14 +162,14 @@ Below the `RECENCY_OPTIONS` const add:
 
 ```ts
 // Client mirror of the server's skill rules (route re-enforces them).
-const MAX_SKILLS = 5;
+const MAX_SKILLS = 3;
 const MAX_SKILL_LEN = 40;
 ```
 
 Inside the component, next to the other handlers (e.g. after `clearCity`), add:
 
 ```tsx
-  // Clean chips like the server will: trim, truncate, CI-dedupe, cap at 5.
+  // Clean chips like the server will: trim, truncate, CI-dedupe, cap at 3.
   const setSkills = (next: string[]) => {
     const seen = new Set<string>();
     const cleaned: string[] = [];

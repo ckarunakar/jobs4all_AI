@@ -47,7 +47,7 @@ export interface JobFilters {
   state?: string;
   city?: string;
   jobType?: string;
-  /** Whole-word skill keywords (max 5) — matches if ANY appears in title/description. */
+  /** Whole-word skill keywords (max 3) — matches if ANY appears in title/description. */
   skills?: string[];
   /** Only postings from the past 1 / 7 / 30 days (uses posted_at). */
   postedWithinDays?: PostedWithinDays;
