@@ -1,7 +1,7 @@
 /**
  * GET /api/jobs — read-only, filtered SQL Server job feed.
  * Query params: limit, jobType, city, postedWithinDays (1|7|30), sort
- *   (default|newest). Legacy search/state are still accepted.
+ *   (default|newest), skill (repeatable). Legacy search/state are still accepted.
  * Returns: { ok: true, jobs: JobListing[], source: "sql-server", count }
  *
  * SELECT-only, parameterized. Credentials stay server-side; filtering happens
@@ -36,6 +36,25 @@ function clean(v: string | null): string | undefined {
   return s ? s : undefined;
 }
 
+const MAX_SKILLS = 5;
+const MAX_SKILL_LEN = 40;
+
+/** Clean repeated ?skill= params: trim, truncate to 40, dedupe (CI), cap 5. */
+function parseSkills(values: string[]): string[] | undefined {
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const raw of values) {
+    const s = raw.trim().slice(0, MAX_SKILL_LEN);
+    if (!s) continue;
+    const key = s.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(s);
+    if (out.length === MAX_SKILLS) break;
+  }
+  return out.length ? out : undefined;
+}
+
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
 
@@ -46,6 +65,7 @@ export async function GET(req: Request) {
     state: clean(searchParams.get("state")),
     city: clean(searchParams.get("city")),
     jobType: clean(searchParams.get("jobType")),
+    skills: parseSkills(searchParams.getAll("skill")),
     postedWithinDays: parsePostedWithinDays(searchParams.get("postedWithinDays")),
     sort: parseSort(searchParams.get("sort")),
   };
