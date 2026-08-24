@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** A "Skills" chip row in the job filter panel — up to 5 keywords, whole-word-matched (ANY-match) against job title + description in SQL, composing with all existing filters.
+**Goal:** A "Skills" chip row in the job filter panel — up to 3 keywords, whole-word-matched (ANY-match) against job title + description in SQL, composing with all existing filters.
 
 **Architecture:** One new parameterized OR-group in the existing WHERE-clause builder (`fetchJobListings`); repeated `?skill=` query params on `GET /api/jobs`; `skills?: string[]` threaded through `JobFilters` → `JobFilterState` → `buildJobsUrl`; the filter panel reuses the existing `TagInput` chip component with a cleaning wrapper. No schema, auth, or scoring changes.
 
