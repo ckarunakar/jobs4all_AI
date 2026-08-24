@@ -33,6 +33,25 @@ function str(v: unknown): string | undefined {
   return s || undefined;
 }
 
+/** Escape LIKE metacharacters in user text (used with ESCAPE '\').
+ *  Order matters: the escape char itself must be escaped first. */
+function escapeLike(s: string): string {
+  return s
+    .replace(/\\/g, "\\\\")
+    .replace(/%/g, "\\%")
+    .replace(/_/g, "\\_")
+    .replace(/\[/g, "\\[");
+}
+
+/** Anything NOT part of a skill token ("java" ≠ "javascript"/"java8";
+ *  "c++", "c#", ".net", "node.js" match whole). */
+const SKILL_BOUNDARY = "[^a-z0-9+#.]";
+
+/** Whole-word LIKE pattern for one skill, built in Node and bound whole. */
+function skillPattern(skill: string): string {
+  return `%${SKILL_BOUNDARY}${escapeLike(skill)}${SKILL_BOUNDARY}%`;
+}
+
 interface RawRow {
   id?: unknown; // job_reference
   title?: unknown;
@@ -158,6 +177,19 @@ export async function fetchJobListings(
         );
       }
     }
+  }
+
+  // Skill keywords: whole-word match against title + description (ANY-match).
+  // The full pattern (boundary classes included) is built in Node and bound
+  // as one parameter; the haystack is space-padded so boundaries work at the
+  // start/end of the text.
+  const skills = (filters.skills ?? []).filter(Boolean);
+  if (skills.length > 0) {
+    const clauses = skills.map((s, i) => {
+      request.input(`skill${i}`, sql.NVarChar, skillPattern(s));
+      return `(' ' + Title + ' ' + ISNULL(description, '') + ' ') LIKE @skill${i} ESCAPE '\\'`;
+    });
+    where.push(`(${clauses.join(" OR ")})`);
   }
 
   // Recency: posted_at within the past N days (1 = past 24h). Nulls excluded

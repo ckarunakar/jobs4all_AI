@@ -17,6 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/toast";
+import { TagInput } from "@/components/profile/TagInput";
 import { useSwipeStore, type JobFilterState } from "@/lib/swipe/swipeStore";
 
 const RECENCY_OPTIONS: { value: string; label: string }[] = [
@@ -26,9 +27,18 @@ const RECENCY_OPTIONS: { value: string; label: string }[] = [
   { value: "30", label: "Past 30 days" },
 ];
 
+// Client mirror of the server's skill rules (route re-enforces them).
+const MAX_SKILLS = 3;
+const MAX_SKILL_LEN = 40;
+
 export function JobFilterButton() {
-  const { jobFilters, activeFilterCount, loadFilteredJobs, clearJobFilters } =
-    useSwipeStore();
+  const {
+    jobFilters,
+    activeFilterCount,
+    loadFilteredJobs,
+    clearJobFilters,
+    filtering,
+  } = useSwipeStore();
   const { toast } = useToast();
 
   const [open, setOpen] = useState(false);
@@ -95,6 +105,22 @@ export function JobFilterButton() {
     setCityMenuOpen(false);
   };
 
+  // Clean chips like the server will: trim, truncate, CI-dedupe, cap at 3.
+  const setSkills = (next: string[]) => {
+    const seen = new Set<string>();
+    const cleaned: string[] = [];
+    for (const raw of next) {
+      const s = raw.trim().slice(0, MAX_SKILL_LEN);
+      if (!s) continue;
+      const key = s.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      cleaned.push(s);
+      if (cleaned.length === MAX_SKILLS) break;
+    }
+    setDraft((d) => ({ ...d, skills: cleaned.length ? cleaned : undefined }));
+  };
+
   const applyFilters = async () => {
     const typed = cityInput.trim();
     // City filter requires a selection from the list (blocks typo filters).
@@ -109,6 +135,7 @@ export function JobFilterButton() {
     };
     setOpen(false);
     const res = await loadFilteredJobs(next);
+    if (res.stale) return;
     if (res.ok) {
       toast(
         res.count > 0
@@ -153,14 +180,19 @@ export function JobFilterButton() {
         description="Filtering runs in SQL — only matching jobs are loaded."
         footer={
           <div className="flex flex-wrap items-center gap-2">
-            <Button variant="ghost" size="sm" onClick={clearAll}>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={clearAll}
+              disabled={filtering}
+            >
               Clear filters
             </Button>
             <div className="flex-1" />
             <Button variant="secondary" size="sm" onClick={() => setOpen(false)}>
               Cancel
             </Button>
-            <Button size="sm" onClick={applyFilters}>
+            <Button size="sm" onClick={applyFilters} disabled={filtering}>
               Apply filters
             </Button>
           </div>
@@ -184,6 +216,20 @@ export function JobFilterButton() {
                 </option>
               ))}
             </Select>
+          </div>
+
+          {/* Skills */}
+          <div className="space-y-2">
+            <Label>Skills</Label>
+            <TagInput
+              values={draft.skills ?? []}
+              onChange={setSkills}
+              placeholder="e.g. python, react, c++…"
+            />
+            <p className="text-xs text-muted-foreground">
+              Matches whole words in the job title and description — e.g.
+              python, react, c++
+            </p>
           </div>
 
           {/* City autocomplete */}

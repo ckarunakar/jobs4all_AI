@@ -10,7 +10,7 @@ submitted automatically.
 
 - **Auth** — email/password (bcrypt) and optional Google OAuth via NextAuth v5. Browsing the job feed is public; an account is needed for AI scoring, seen-history sync, and the dashboard/tracker/profile pages.
 - **Swipe feed** — jobs read server-side from SQL Server with filters (type,
-  city, recency); per-user seen-history so reviewed jobs don't resurface.
+  city, recency, skill keywords); per-user seen-history so reviewed jobs don't resurface.
 - **Resume upload** — .pdf/.docx stored in SQL Server; text extracted
   (pdf-parse / mammoth) for scoring.
 - **AI scoring** — "Score next 10 jobs with AI" scores the next 10 unscored
