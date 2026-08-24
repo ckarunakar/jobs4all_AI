@@ -33,6 +33,7 @@ import type { SwipeDecision, SwipeJob, SwipeJobStatus } from "@/types/swipe";
 export interface JobFilterState {
   jobType?: string;
   city?: string;
+  skills?: string[];
   postedWithinDays?: 1 | 7 | 30;
   sort?: "default" | "newest";
 }
@@ -42,6 +43,7 @@ export function countActiveFilters(f: JobFilterState): number {
   let n = 0;
   if (f.jobType) n++;
   if (f.city) n++;
+  if (f.skills && f.skills.length > 0) n++;
   if (f.postedWithinDays) n++;
   if (f.sort && f.sort !== "default") n++;
   return n;
@@ -52,6 +54,7 @@ function buildJobsUrl(filters: JobFilterState, limit = 100): string {
   p.set("limit", String(limit));
   if (filters.jobType) p.set("jobType", filters.jobType);
   if (filters.city) p.set("city", filters.city);
+  for (const s of filters.skills ?? []) p.append("skill", s);
   if (filters.postedWithinDays)
     p.set("postedWithinDays", String(filters.postedWithinDays));
   if (filters.sort && filters.sort !== "default") p.set("sort", filters.sort);
