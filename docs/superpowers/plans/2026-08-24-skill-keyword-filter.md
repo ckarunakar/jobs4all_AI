@@ -12,7 +12,7 @@
 
 - Spec: `docs/superpowers/specs/2026-08-23-skill-keyword-filter-design.md`. Read it first.
 - Query param name is `skill` (repeated): `?skill=python&skill=react`.
-- Caps everywhere (client mirror + server defense): trim → truncate to **40** chars → drop empties → dedupe case-insensitively → keep first **5**.
+- Caps everywhere (client mirror + server defense): trim → truncate to **40** chars → drop empties → dedupe case-insensitively → keep first **3**.
 - Word-boundary class is exactly `[^a-z0-9+#.]`; haystack is exactly `(' ' + Title + ' ' + ISNULL(description, '') + ' ')`; LIKE escape char is `\` with escape order `\` → `%` → `_` → `[`.
 - Skills count as ONE active filter in the badge count, regardless of chip count.
 - Exact UI copy — label: `Skills`; placeholder: `e.g. python, react, c++…`; helper text: `Matches whole words in the job title and description — e.g. python, react, c++`.
@@ -255,7 +255,7 @@ curl -s 'http://localhost:3000/api/jobs?skill=python&skill=react&limit=200' | no
 curl -s 'http://localhost:3000/api/jobs?skill=python&jobType=Full-time&limit=200' | node -e 'let s="";process.stdin.on("data",c=>s+=c).on("end",()=>console.log("composed count:",JSON.parse(s).count))'
 # Expected: union ≥ each single-skill count; composed ≤ python-only count.
 
-# 4. Caps: 7 skills sent, at most 5 applied (no error).
+# 4. Caps: 7 skills sent, at most 3 applied (no error).
 curl -s -o /dev/null -w "HTTP %{http_code}\n" 'http://localhost:3000/api/jobs?skill=a1&skill=a2&skill=a3&skill=a4&skill=a5&skill=a6&skill=a7&limit=5'
 # Expected: HTTP 200
 
@@ -264,6 +264,6 @@ curl -s -o /dev/null -w "HTTP %{http_code}\n" 'http://localhost:3000/api/jobs?sk
 # Expected: HTTP 200
 ```
 
-- [ ] **Step 3: UI pass (browser or hand off to user).** Open /swipe → Filters: add chips (Enter and + both work), 6th chip is ignored, duplicate "Python"/"python" collapses to one, badge shows skills as one filter, Apply toasts a count, Clear filters empties chips, and a guest window can use the filter.
+- [ ] **Step 3: UI pass (browser or hand off to user).** Open /swipe → Filters: add chips (Enter and + both work), 4th chip is ignored, duplicate "Python"/"python" collapses to one, badge shows skills as one filter, Apply toasts a count, Clear filters empties chips, and a guest window can use the filter.
 
 - [ ] **Step 4: commit any fixes** surfaced by verification, message: `fix: <what verification surfaced>`.

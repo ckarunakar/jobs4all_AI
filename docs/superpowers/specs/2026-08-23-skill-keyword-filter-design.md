@@ -9,7 +9,7 @@ composes with every existing filter (job type, city, recency, sort).
 
 ## Decisions (approved)
 
-- **Multiple skills, ANY-match:** up to 5 skill chips; a job matches if its
+- **Multiple skills, ANY-match:** up to 3 skill chips; a job matches if its
   text contains at least one of them. The skill clauses OR together inside one
   group, which ANDs with all other active filters.
 - **Whole-word LIKE matching** (not plain substring, not SQL Full-Text):
@@ -47,14 +47,17 @@ Semantics notes (accepted, documented here deliberately):
 - **Full scan, like every existing filter.** The default sort already scans
   the table (`NEWID()` round-robin); acceptable at current volume. Full-Text
   indexing was considered and rejected (ops change on the client-managed SQL
-  Server for a scraper-owned table).
+  Server for a scraper-owned table). Verified live 2026-08-24: each skill
+  clause adds seconds of scan time; the cap is 3 (a 5-skill query exceeded
+  the previous 20s request timeout), and the pool requestTimeout is raised
+  to 60s as a safety net.
 
 ## Section 2 — API (`app/api/jobs/route.ts`)
 
 Repeated query params: `GET /api/jobs?skill=python&skill=react`. The route
 reads `searchParams.getAll("skill")` and cleans server-side (defense in depth,
 mirroring the client rules): trim each, drop empties, truncate each to 40 chars,
-dedupe case-insensitively, keep the first 5. The cleaned array goes into
+dedupe case-insensitively, keep the first 3. The cleaned array goes into
 `filters.skills`. No auth change — the route already serves guests.
 
 ## Section 3 — Store (`lib/swipe/swipeStore.tsx`)
@@ -75,7 +78,7 @@ unchanged:
 
 - `TagInput` itself has no cap and dedupes exact-case only, so the panel's
   `onChange` wrapper enforces the rules: trim, truncate to 40 chars per
-  skill, case-insensitive dedupe, ignore additions beyond 5 chips.
+  skill, case-insensitive dedupe, ignore additions beyond 3 chips.
 - Draft state lives in the existing `draft: JobFilterState` (chips seed from
   the applied filters when the panel opens, same as every other field).
 - Helper text under the input:
@@ -103,7 +106,7 @@ unchanged:
    returns no jobs that only contain "good".
 3. Union: `skill=python&skill=react` ⊇ each individual result set (same other
    filters); composition: adding `city=`/`jobType=` narrows it.
-4. UI: chips add/remove/Enter; 6th chip ignored; badge counts skills as one
+4. UI: chips add/remove/Enter; 4th chip ignored; badge counts skills as one
    filter; Clear filters empties chips; guest (logged-out) filtering works.
 
 ## Out of scope

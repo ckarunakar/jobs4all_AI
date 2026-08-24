@@ -28,7 +28,7 @@ const RECENCY_OPTIONS: { value: string; label: string }[] = [
 ];
 
 // Client mirror of the server's skill rules (route re-enforces them).
-const MAX_SKILLS = 5;
+const MAX_SKILLS = 3;
 const MAX_SKILL_LEN = 40;
 
 export function JobFilterButton() {

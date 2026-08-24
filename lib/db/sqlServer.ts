@@ -55,7 +55,7 @@ function buildConfig(): sql.config {
     },
     pool: { max: 5, min: 0, idleTimeoutMillis: 30_000 },
     connectionTimeout: 15_000,
-    requestTimeout: 20_000,
+    requestTimeout: 60_000, // skill-filter LIKE scans can run long (see 2026-08-23 spec)
   };
 }
 

@@ -36,10 +36,10 @@ function clean(v: string | null): string | undefined {
   return s ? s : undefined;
 }
 
-const MAX_SKILLS = 5;
+const MAX_SKILLS = 3;
 const MAX_SKILL_LEN = 40;
 
-/** Clean repeated ?skill= params: trim, truncate to 40, dedupe (CI), cap 5. */
+/** Clean repeated ?skill= params: trim, truncate to 40, dedupe (CI), cap 3. */
 function parseSkills(values: string[]): string[] | undefined {
   const out: string[] = [];
   const seen = new Set<string>();
