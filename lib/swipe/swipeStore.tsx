@@ -397,15 +397,21 @@ export function SwipeStoreProvider({
         }
         localStorage.setItem(importKey, "1");
         // Absorb the guest-era payload into this account: clear the stored
-        // statuses/notes (profile untouched) so this pipeline isn't
-        // re-imported by the next account to log in on this browser.
+        // statuses/notes (profile + prefFilters toggle untouched) so this
+        // pipeline isn't re-imported by the next account to log in on this
+        // browser.
         try {
           const raw = localStorage.getItem(STORAGE_KEY);
           if (raw) {
             const parsed = JSON.parse(raw) as Persisted;
             localStorage.setItem(
               STORAGE_KEY,
-              JSON.stringify({ statuses: {}, notes: {}, profile: parsed.profile }),
+              JSON.stringify({
+                statuses: {},
+                notes: {},
+                profile: parsed.profile,
+                prefFilters: parsed.prefFilters,
+              }),
             );
           }
         } catch {
@@ -777,6 +783,9 @@ export function SwipeStoreProvider({
   const setUsePreferenceFilters = useCallback(
     (on: boolean) => {
       setUsePreferenceFiltersState(on);
+      // No pref tags on the profile means the refetch would be a guaranteed
+      // no-op — skip the (slow) round trip entirely.
+      if (!hasPrefFilters(derivePrefFilterParams(profile))) return;
       const reqId = ++filterReqRef.current;
       setFiltering(true);
       fetchJobs(jobFilters, activePrefs(on))
@@ -789,7 +798,7 @@ export function SwipeStoreProvider({
           if (reqId === filterReqRef.current) setFiltering(false);
         });
     },
-    [jobFilters, activePrefs, replaceDeck],
+    [jobFilters, activePrefs, replaceDeck, profile],
   );
 
   const reset = useCallback(() => {
@@ -797,14 +806,15 @@ export function SwipeStoreProvider({
     setProfile(DEFAULT_SWIPE_PROFILE);
     setJobFilters({});
     setFiltering(true);
+    const reqId = ++filterReqRef.current;
     if (isLoggedIn) {
       // Logged in: Reset re-syncs from the server — it does NOT clear the
-      // saved pipeline (there is deliberately no delete endpoint).
-      Promise.all([
-        fetchJobs({}, activePrefs(usePreferenceFilters)),
-        fetchTrackedJobs(),
-      ])
+      // saved pipeline (there is deliberately no delete endpoint). No prefs
+      // on the fetch: the profile was just reset to the default, which has
+      // no preference tags, so no pref params belong on this request.
+      Promise.all([fetchJobs(), fetchTrackedJobs()])
         .then(([feed, tracked]) => {
+          if (reqId !== filterReqRef.current) return;
           const trackedIds = new Set(tracked.jobs.map((j) => j.id));
           setJobs(
             withKnownScores([
@@ -816,16 +826,21 @@ export function SwipeStoreProvider({
           setError(feed.error);
           setPipelineError(tracked.error);
         })
-        .finally(() => setFiltering(false));
+        .finally(() => {
+          if (reqId === filterReqRef.current) setFiltering(false);
+        });
     } else {
-      fetchJobs({}, activePrefs(usePreferenceFilters))
+      fetchJobs()
         .then((res) => {
+          if (reqId !== filterReqRef.current) return;
           setJobs(withKnownScores(res.jobs));
           setError(res.error);
         })
-        .finally(() => setFiltering(false));
+        .finally(() => {
+          if (reqId === filterReqRef.current) setFiltering(false);
+        });
     }
-  }, [isLoggedIn, withKnownScores, activePrefs, usePreferenceFilters]);
+  }, [isLoggedIn, withKnownScores]);
 
   const queue = useMemo(
     () => jobs.filter((j) => j.status === "new"),
