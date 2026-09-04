@@ -1,7 +1,8 @@
 /**
  * GET /api/jobs — read-only, filtered SQL Server job feed.
  * Query params: limit, jobType, city, postedWithinDays (1|7|30), sort
- *   (default|newest), skill (repeatable). Legacy search/state are still accepted.
+ *   (default|newest), skill (repeatable), prefLoc (repeatable), prefRole (repeatable),
+ *   prefTech (repeatable). Legacy search/state are still accepted.
  * Returns: { ok: true, jobs: JobListing[], source: "sql-server", count }
  *
  * SELECT-only, parameterized. Credentials stay server-side; filtering happens
@@ -38,19 +39,26 @@ function clean(v: string | null): string | undefined {
 
 const MAX_SKILLS = 3;
 const MAX_SKILL_LEN = 40;
+const MAX_PREF_LOC = 5;
+const MAX_PREF_ROLE = 6;
+const MAX_PREF_LEN = 60;
 
-/** Clean repeated ?skill= params: trim, truncate to 40, dedupe (CI), cap 3. */
-function parseSkills(values: string[]): string[] | undefined {
+/** Clean a repeated keyword param: trim, truncate, dedupe (CI), cap. */
+function cleanKeywordList(
+  values: string[],
+  maxLen: number,
+  maxCount: number,
+): string[] | undefined {
   const out: string[] = [];
   const seen = new Set<string>();
   for (const raw of values) {
-    const s = raw.trim().slice(0, MAX_SKILL_LEN);
+    const s = raw.trim().slice(0, maxLen);
     if (!s) continue;
     const key = s.toLowerCase();
     if (seen.has(key)) continue;
     seen.add(key);
     out.push(s);
-    if (out.length === MAX_SKILLS) break;
+    if (out.length === maxCount) break;
   }
   return out.length ? out : undefined;
 }
@@ -65,7 +73,10 @@ export async function GET(req: Request) {
     state: clean(searchParams.get("state")),
     city: clean(searchParams.get("city")),
     jobType: clean(searchParams.get("jobType")),
-    skills: parseSkills(searchParams.getAll("skill")),
+    skills: cleanKeywordList(searchParams.getAll("skill"), MAX_SKILL_LEN, MAX_SKILLS),
+    prefLocations: cleanKeywordList(searchParams.getAll("prefLoc"), MAX_PREF_LEN, MAX_PREF_LOC),
+    prefRoles: cleanKeywordList(searchParams.getAll("prefRole"), MAX_PREF_LEN, MAX_PREF_ROLE),
+    prefTech: cleanKeywordList(searchParams.getAll("prefTech"), MAX_SKILL_LEN, MAX_SKILLS),
     postedWithinDays: parsePostedWithinDays(searchParams.get("postedWithinDays")),
     sort: parseSort(searchParams.get("sort")),
   };

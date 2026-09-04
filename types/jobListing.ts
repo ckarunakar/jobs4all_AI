@@ -49,6 +49,12 @@ export interface JobFilters {
   jobType?: string;
   /** Whole-word skill keywords (max 3) — matches if ANY appears in title/description. */
   skills?: string[];
+  /** Preference baseline: location tags (contains-match, max 5). */
+  prefLocations?: string[];
+  /** Preference baseline: role/title keywords (whole-word vs Title, max 6). */
+  prefRoles?: string[];
+  /** Preference baseline: tech keywords (whole-word vs title+description, max 3). */
+  prefTech?: string[];
   /** Only postings from the past 1 / 7 / 30 days (uses posted_at). */
   postedWithinDays?: PostedWithinDays;
   /** "newest" → posted_at DESC; "default" → diverse company round-robin. */

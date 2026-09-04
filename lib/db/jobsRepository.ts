@@ -52,6 +52,11 @@ function skillPattern(skill: string): string {
   return `%${SKILL_BOUNDARY}${escapeLike(skill)}${SKILL_BOUNDARY}%`;
 }
 
+/** Plain contains LIKE pattern (no word boundaries) — for location tags. */
+function containsPattern(text: string): string {
+  return `%${escapeLike(text)}%`;
+}
+
 interface RawRow {
   id?: unknown; // job_reference
   title?: unknown;
@@ -188,6 +193,41 @@ export async function fetchJobListings(
     const clauses = skills.map((s, i) => {
       request.input(`skill${i}`, sql.NVarChar, skillPattern(s));
       return `(' ' + Title + ' ' + ISNULL(description, '') + ' ') LIKE @skill${i} ESCAPE '\\'`;
+    });
+    where.push(`(${clauses.join(" OR ")})`);
+  }
+
+  // Preference baseline (2026-09-04 spec): three independent OR-groups,
+  // ANDed with each other and with every manual filter. Kept separate from
+  // the manual skills group so a preference tag can never satisfy a manual
+  // skill filter.
+  const prefTech = (filters.prefTech ?? []).filter(Boolean);
+  if (prefTech.length > 0) {
+    const clauses = prefTech.map((t, i) => {
+      request.input(`prefTech${i}`, sql.NVarChar, skillPattern(t));
+      return `(' ' + Title + ' ' + ISNULL(description, '') + ' ') LIKE @prefTech${i} ESCAPE '\\'`;
+    });
+    where.push(`(${clauses.join(" OR ")})`);
+  }
+
+  // Role/target-role keywords: whole-word/phrase against the title only.
+  const prefRoles = (filters.prefRoles ?? []).filter(Boolean);
+  if (prefRoles.length > 0) {
+    const clauses = prefRoles.map((r, i) => {
+      request.input(`prefRole${i}`, sql.NVarChar, skillPattern(r));
+      return `(' ' + Title + ' ') LIKE @prefRole${i} ESCAPE '\\'`;
+    });
+    where.push(`(${clauses.join(" OR ")})`);
+  }
+
+  // Location tags: contains-match on the location columns; a tag containing
+  // "remote" also accepts flagged-remote rows.
+  const prefLocations = (filters.prefLocations ?? []).filter(Boolean);
+  if (prefLocations.length > 0) {
+    const clauses = prefLocations.map((tag, i) => {
+      request.input(`prefLoc${i}`, sql.NVarChar, containsPattern(tag));
+      const cols = `(city LIKE @prefLoc${i} ESCAPE '\\' OR state LIKE @prefLoc${i} ESCAPE '\\' OR Location LIKE @prefLoc${i} ESCAPE '\\')`;
+      return /remote/i.test(tag) ? `(${cols} OR Isremote = 1)` : cols;
     });
     where.push(`(${clauses.join(" OR ")})`);
   }
