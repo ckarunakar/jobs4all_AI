@@ -84,9 +84,11 @@ skill filter's `escapeLike` / `SKILL_BOUNDARY` / `skillPattern` helpers:
   refetches the deck through the existing filtered-fetch path (stale-response
   guard and `replaceDeck` semantics included — tracked/swiped jobs survive,
   as with any deck replacement).
-- Store exposes `prefFilterSummary` (derived): the active counts per
-  category (e.g. `{ locations: 2, roles: 4, tech: 3 }`, zeros omitted) for
-  the UI surfaces; null when the toggle is off or no prefs exist.
+- Store exposes `prefFilterSummary` (derived): a compact caption of the
+  profile's preference tags (e.g. `2 locations · 4 roles · 3 tech`, zeros
+  omitted); null only when the profile has no preference tags. Deliberately
+  independent of the toggle — the panel's toggle row shows the caption even
+  while the baseline is off, so the user can see what enabling it would do.
 - Editing preferences on /profile takes effect on the NEXT fetch — no
   refetch-on-keystroke.
 
