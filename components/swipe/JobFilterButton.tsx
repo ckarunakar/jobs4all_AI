@@ -167,7 +167,7 @@ export function JobFilterButton() {
 
   return (
     <>
-      {usePreferenceFilters && prefFilterSummary && (
+      {hydrated && usePreferenceFilters && prefFilterSummary && (
         <button
           type="button"
           onClick={openPanel}

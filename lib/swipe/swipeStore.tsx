@@ -423,6 +423,11 @@ export function SwipeStoreProvider({
     }
 
     async function load(): Promise<void> {
+      // Join the same filterReqRef sequencing as filter applies: hydration's
+      // first fetch can take 17-19s with prefs on, and the Filters button is
+      // only gated by `filtering` (false pre-hydration) — a filter/toggle
+      // applied mid-hydration must win, not be clobbered by this response.
+      const reqId = ++filterReqRef.current;
       const derived = derivePrefFilterParams(seededProfile);
       const prefs = prefFiltersOn && hasPrefFilters(derived) ? derived : undefined;
       if (isLoggedIn) {
@@ -432,24 +437,29 @@ export function SwipeStoreProvider({
           fetchTrackedJobs(),
         ]);
         if (cancelled) return;
-        // Server state wins: localStorage statuses are NOT applied. The feed
-        // excludes seen jobs server-side, so overlap is belt-and-braces only.
-        const trackedIds = new Set(tracked.jobs.map((j) => j.id));
-        setJobs(
-          withKnownScores([
-            ...tracked.jobs,
-            ...feed.jobs.filter((j) => !trackedIds.has(j.id)),
-          ]),
-        );
-        setNotesState(tracked.notes);
-        setError(feed.error);
-        setPipelineError(tracked.error);
+        if (reqId === filterReqRef.current) {
+          // Server state wins: localStorage statuses are NOT applied. The
+          // feed excludes seen jobs server-side, so overlap is
+          // belt-and-braces only.
+          const trackedIds = new Set(tracked.jobs.map((j) => j.id));
+          setJobs(
+            withKnownScores([
+              ...tracked.jobs,
+              ...feed.jobs.filter((j) => !trackedIds.has(j.id)),
+            ]),
+          );
+          setNotesState(tracked.notes);
+          setError(feed.error);
+          setPipelineError(tracked.error);
+        }
       } else {
         const res = await fetchJobs({}, prefs);
         if (cancelled) return;
-        setJobs(withKnownScores(withStatuses(res.jobs, statuses)));
-        setNotesState(storedNotes);
-        setError(res.error);
+        if (reqId === filterReqRef.current) {
+          setJobs(withKnownScores(withStatuses(res.jobs, statuses)));
+          setNotesState(storedNotes);
+          setError(res.error);
+        }
       }
       setHydrated(true);
     }
