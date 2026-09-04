@@ -30,6 +30,9 @@ export default function SwipePage() {
     isLoggedIn,
     decide,
     scoreNextJobs,
+    usePreferenceFilters,
+    prefFilterSummary,
+    setUsePreferenceFilters,
   } = useSwipeStore();
   const { openDetail, openApply } = useSwipeInteractions();
   const { toast } = useToast();
@@ -148,19 +151,39 @@ export default function SwipePage() {
           </div>
         ) : jobs.length === 0 ? (
           <div className="flex min-h-0 flex-1 items-center justify-center">
-            <EmptyState
-              icon={Inbox}
-              title={
-                activeFilterCount > 0
-                  ? "You've reviewed all jobs matching these filters"
-                  : "You're all caught up"
-              }
-              description={
-                activeFilterCount > 0
-                  ? "Try clearing filters or check back later for new jobs."
-                  : "Check back later for new jobs."
-              }
-            />
+            {usePreferenceFilters && prefFilterSummary ? (
+              <EmptyState
+                icon={Inbox}
+                title="No jobs match your preferences"
+                description="Your profile preferences are filtering the feed. Show everything, or adjust them."
+                action={
+                  <div className="flex flex-col gap-2 sm:flex-row">
+                    <Button onClick={() => setUsePreferenceFilters(false)}>
+                      Show all jobs
+                    </Button>
+                    <Link href="/profile">
+                      <Button variant="secondary" className="w-full">
+                        Edit preferences
+                      </Button>
+                    </Link>
+                  </div>
+                }
+              />
+            ) : (
+              <EmptyState
+                icon={Inbox}
+                title={
+                  activeFilterCount > 0
+                    ? "You've reviewed all jobs matching these filters"
+                    : "You're all caught up"
+                }
+                description={
+                  activeFilterCount > 0
+                    ? "Try clearing filters or check back later for new jobs."
+                    : "Check back later for new jobs."
+                }
+              />
+            )}
           </div>
         ) : queue.length === 0 ? (
           <div className="flex min-h-0 flex-1 items-center justify-center">
