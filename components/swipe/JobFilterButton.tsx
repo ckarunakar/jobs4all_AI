@@ -16,6 +16,7 @@ import { Select } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/components/ui/toast";
 import { TagInput } from "@/components/profile/TagInput";
 import { useSwipeStore, type JobFilterState } from "@/lib/swipe/swipeStore";
@@ -38,6 +39,10 @@ export function JobFilterButton() {
     loadFilteredJobs,
     clearJobFilters,
     filtering,
+    usePreferenceFilters,
+    prefFilterSummary,
+    setUsePreferenceFilters,
+    hydrated,
   } = useSwipeStore();
   const { toast } = useToast();
 
@@ -162,6 +167,16 @@ export function JobFilterButton() {
 
   return (
     <>
+      {hydrated && usePreferenceFilters && prefFilterSummary && (
+        <button
+          type="button"
+          onClick={openPanel}
+          className="rounded-full border border-primary/40 bg-primary-soft px-2.5 py-1 text-xs font-medium text-accent"
+        >
+          Preferences on
+        </button>
+      )}
+
       <Button variant="ghost" size="sm" onClick={openPanel}>
         <Filter className="size-4" />
         Filters
@@ -199,6 +214,28 @@ export function JobFilterButton() {
         }
       >
         <div className="space-y-5">
+          {/* Preference baseline */}
+          <div className="rounded-lg border border-border bg-surface p-3">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <Label htmlFor="f-prefs">Use my preferences</Label>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {prefFilterSummary
+                    ? `${prefFilterSummary} — set on your profile`
+                    : "Add preferences on your profile to filter by default"}
+                </p>
+              </div>
+              {prefFilterSummary && (
+                <Checkbox
+                  id="f-prefs"
+                  checked={usePreferenceFilters}
+                  onCheckedChange={setUsePreferenceFilters}
+                  disabled={!hydrated || filtering}
+                />
+              )}
+            </div>
+          </div>
+
           {/* Job type */}
           <div className="space-y-2">
             <Label htmlFor="f-jobtype">Job type</Label>

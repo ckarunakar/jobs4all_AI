@@ -28,6 +28,12 @@ import type { ResumeProfile } from "@/lib/careerOps/types";
 import type { CareerOpsAiScore } from "@/lib/careerOps/aiScore";
 import type { JobListing } from "@/types/jobListing";
 import type { SwipeDecision, SwipeJob, SwipeJobStatus } from "@/types/swipe";
+import {
+  derivePrefFilterParams,
+  hasPrefFilters,
+  prefFilterSummaryText,
+  type PrefFilterParams,
+} from "@/lib/swipe/prefFilters";
 
 /** Active job filters — drive the SQL WHERE clauses via /api/jobs (server-side). */
 export interface JobFilterState {
@@ -49,7 +55,11 @@ export function countActiveFilters(f: JobFilterState): number {
   return n;
 }
 
-function buildJobsUrl(filters: JobFilterState, limit = 100): string {
+function buildJobsUrl(
+  filters: JobFilterState,
+  prefs?: PrefFilterParams,
+  limit = 100,
+): string {
   const p = new URLSearchParams();
   p.set("limit", String(limit));
   if (filters.jobType) p.set("jobType", filters.jobType);
@@ -58,6 +68,9 @@ function buildJobsUrl(filters: JobFilterState, limit = 100): string {
   if (filters.postedWithinDays)
     p.set("postedWithinDays", String(filters.postedWithinDays));
   if (filters.sort && filters.sort !== "default") p.set("sort", filters.sort);
+  for (const v of prefs?.prefLoc ?? []) p.append("prefLoc", v);
+  for (const v of prefs?.prefRole ?? []) p.append("prefRole", v);
+  for (const v of prefs?.prefTech ?? []) p.append("prefTech", v);
   return `/api/jobs?${p.toString()}`;
 }
 
@@ -67,12 +80,15 @@ function buildJobsUrl(filters: JobFilterState, limit = 100): string {
  * data source. An *empty* filtered result is returned as-is (so the UI can
  * say "no jobs matched").
  */
-async function fetchJobs(filters: JobFilterState = {}): Promise<{
+async function fetchJobs(
+  filters: JobFilterState = {},
+  prefs?: PrefFilterParams,
+): Promise<{
   jobs: SwipeJob[];
   error: string | null;
 }> {
   try {
-    const res = await fetch(buildJobsUrl(filters));
+    const res = await fetch(buildJobsUrl(filters, prefs));
     const data = (await res.json()) as {
       ok?: boolean;
       jobs?: JobListing[];
@@ -169,6 +185,7 @@ interface Persisted {
   statuses: Record<string, SwipeJobStatus>;
   notes: Record<string, string>;
   profile: ResumeProfile;
+  prefFilters?: boolean;
 }
 
 export interface ScoreNextJobsResult {
@@ -200,6 +217,12 @@ interface SwipeStore {
   activeFilterCount: number;
   /** True while a filtered/default job fetch is in flight. */
   filtering: boolean;
+  /** Preference-baseline toggle (default true; persisted). */
+  usePreferenceFilters: boolean;
+  /** Caption of the profile's pref tags ("2 locations · 3 tech"); null when none. */
+  prefFilterSummary: string | null;
+  /** Flip the preference baseline and refetch the deck. */
+  setUsePreferenceFilters: (on: boolean) => void;
   /** Jobs still awaiting a decision (the deck queue). */
   queue: SwipeJob[];
   decide: (jobId: string, decision: SwipeDecision) => void;
@@ -305,6 +328,8 @@ export function SwipeStoreProvider({
   );
   const [jobFilters, setJobFilters] = useState<JobFilterState>({});
   const [filtering, setFiltering] = useState(false);
+  // Preference-baseline toggle — default ON; absent in storage means true.
+  const [usePreferenceFilters, setUsePreferenceFiltersState] = useState(true);
 
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
@@ -314,6 +339,7 @@ export function SwipeStoreProvider({
     let statuses: Record<string, SwipeJobStatus> = {};
     let storedNotes: Record<string, string> = {};
     let persistedProfile: Partial<ResumeProfile> | null = null;
+    let prefFiltersOn = true;
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) {
@@ -321,6 +347,7 @@ export function SwipeStoreProvider({
         statuses = parsed.statuses ?? {};
         storedNotes = parsed.notes ?? {};
         if (parsed.profile) persistedProfile = parsed.profile;
+        if (parsed.prefFilters === false) prefFiltersOn = false;
       }
     } catch {
       // ignore corrupt state
@@ -331,7 +358,9 @@ export function SwipeStoreProvider({
     const base = persistedProfile
       ? { ...DEFAULT_SWIPE_PROFILE, ...persistedProfile }
       : DEFAULT_SWIPE_PROFILE;
-    setProfile(sessionEmail ? { ...base, email: sessionEmail } : base);
+    const seededProfile = sessionEmail ? { ...base, email: sessionEmail } : base;
+    setProfile(seededProfile);
+    setUsePreferenceFiltersState(prefFiltersOn);
 
     // One-time import of localStorage pipeline state into the account.
     // Existing server rows win; the flag is only set on success so a failed
@@ -368,15 +397,21 @@ export function SwipeStoreProvider({
         }
         localStorage.setItem(importKey, "1");
         // Absorb the guest-era payload into this account: clear the stored
-        // statuses/notes (profile untouched) so this pipeline isn't
-        // re-imported by the next account to log in on this browser.
+        // statuses/notes (profile + prefFilters toggle untouched) so this
+        // pipeline isn't re-imported by the next account to log in on this
+        // browser.
         try {
           const raw = localStorage.getItem(STORAGE_KEY);
           if (raw) {
             const parsed = JSON.parse(raw) as Persisted;
             localStorage.setItem(
               STORAGE_KEY,
-              JSON.stringify({ statuses: {}, notes: {}, profile: parsed.profile }),
+              JSON.stringify({
+                statuses: {},
+                notes: {},
+                profile: parsed.profile,
+                prefFilters: parsed.prefFilters,
+              }),
             );
           }
         } catch {
@@ -388,31 +423,43 @@ export function SwipeStoreProvider({
     }
 
     async function load(): Promise<void> {
+      // Join the same filterReqRef sequencing as filter applies: hydration's
+      // first fetch can take 17-19s with prefs on, and the Filters button is
+      // only gated by `filtering` (false pre-hydration) — a filter/toggle
+      // applied mid-hydration must win, not be clobbered by this response.
+      const reqId = ++filterReqRef.current;
+      const derived = derivePrefFilterParams(seededProfile);
+      const prefs = prefFiltersOn && hasPrefFilters(derived) ? derived : undefined;
       if (isLoggedIn) {
         await maybeImport();
         const [feed, tracked] = await Promise.all([
-          fetchJobs(),
+          fetchJobs({}, prefs),
           fetchTrackedJobs(),
         ]);
         if (cancelled) return;
-        // Server state wins: localStorage statuses are NOT applied. The feed
-        // excludes seen jobs server-side, so overlap is belt-and-braces only.
-        const trackedIds = new Set(tracked.jobs.map((j) => j.id));
-        setJobs(
-          withKnownScores([
-            ...tracked.jobs,
-            ...feed.jobs.filter((j) => !trackedIds.has(j.id)),
-          ]),
-        );
-        setNotesState(tracked.notes);
-        setError(feed.error);
-        setPipelineError(tracked.error);
+        if (reqId === filterReqRef.current) {
+          // Server state wins: localStorage statuses are NOT applied. The
+          // feed excludes seen jobs server-side, so overlap is
+          // belt-and-braces only.
+          const trackedIds = new Set(tracked.jobs.map((j) => j.id));
+          setJobs(
+            withKnownScores([
+              ...tracked.jobs,
+              ...feed.jobs.filter((j) => !trackedIds.has(j.id)),
+            ]),
+          );
+          setNotesState(tracked.notes);
+          setError(feed.error);
+          setPipelineError(tracked.error);
+        }
       } else {
-        const res = await fetchJobs();
+        const res = await fetchJobs({}, prefs);
         if (cancelled) return;
-        setJobs(withKnownScores(withStatuses(res.jobs, statuses)));
-        setNotesState(storedNotes);
-        setError(res.error);
+        if (reqId === filterReqRef.current) {
+          setJobs(withKnownScores(withStatuses(res.jobs, statuses)));
+          setNotesState(storedNotes);
+          setError(res.error);
+        }
       }
       setHydrated(true);
     }
@@ -448,19 +495,29 @@ export function SwipeStoreProvider({
         }
         localStorage.setItem(
           STORAGE_KEY,
-          JSON.stringify({ statuses: prevStatuses, notes: prevNotes, profile }),
+          JSON.stringify({
+            statuses: prevStatuses,
+            notes: prevNotes,
+            profile,
+            prefFilters: usePreferenceFilters,
+          }),
         );
       } else {
         const statuses = Object.fromEntries(jobs.map((j) => [j.id, j.status]));
         localStorage.setItem(
           STORAGE_KEY,
-          JSON.stringify({ statuses, notes, profile }),
+          JSON.stringify({
+            statuses,
+            notes,
+            profile,
+            prefFilters: usePreferenceFilters,
+          }),
         );
       }
     } catch {
       // storage unavailable — non-fatal
     }
-  }, [jobs, notes, profile, hydrated, isLoggedIn]);
+  }, [jobs, notes, profile, hydrated, isLoggedIn, usePreferenceFilters]);
 
   // Sync one job's full state (status + notes + snapshot) for the logged-in
   // user (fire-and-forget; never blocks the swipe). MERGE-on-server means a
@@ -674,6 +731,15 @@ export function SwipeStoreProvider({
     setJobFilters((prev) => ({ ...prev, ...patch }));
   }, []);
 
+  /** Current pref params when the baseline is on and the profile has any. */
+  const activePrefs = useCallback(
+    (on: boolean): PrefFilterParams | undefined => {
+      const derived = derivePrefFilterParams(profile);
+      return on && hasPrefFilters(derived) ? derived : undefined;
+    },
+    [profile],
+  );
+
   // Apply filters: fetch the matching jobs server-side and replace the deck.
   // Fresh jobs are all status "new", so progress resets to 0.
   const loadFilteredJobs = useCallback(
@@ -690,7 +756,7 @@ export function SwipeStoreProvider({
       if (filters) setJobFilters(filters);
       setFiltering(true);
       try {
-        const res = await fetchJobs(active);
+        const res = await fetchJobs(active, activePrefs(usePreferenceFilters));
         if (reqId !== filterReqRef.current) {
           // A newer filter request superseded this one — drop the response.
           return { ok: true, count: 0, error: null, stale: true };
@@ -702,7 +768,7 @@ export function SwipeStoreProvider({
         if (reqId === filterReqRef.current) setFiltering(false);
       }
     },
-    [replaceDeck],
+    [replaceDeck, activePrefs, usePreferenceFilters],
   );
 
   // Clear filters and reload the default (unfiltered) feed.
@@ -710,7 +776,7 @@ export function SwipeStoreProvider({
     const reqId = ++filterReqRef.current;
     setJobFilters({});
     setFiltering(true);
-    fetchJobs()
+    fetchJobs({}, activePrefs(usePreferenceFilters))
       .then((res) => {
         if (reqId !== filterReqRef.current) return;
         replaceDeck(res.jobs);
@@ -719,18 +785,46 @@ export function SwipeStoreProvider({
       .finally(() => {
         if (reqId === filterReqRef.current) setFiltering(false);
       });
-  }, [replaceDeck]);
+  }, [replaceDeck, activePrefs, usePreferenceFilters]);
+
+  // Flip the preference baseline and refetch the deck immediately. The new
+  // value is passed explicitly — state set on the previous line isn't
+  // visible to activePrefs yet.
+  const setUsePreferenceFilters = useCallback(
+    (on: boolean) => {
+      setUsePreferenceFiltersState(on);
+      // No pref tags on the profile means the refetch would be a guaranteed
+      // no-op — skip the (slow) round trip entirely.
+      if (!hasPrefFilters(derivePrefFilterParams(profile))) return;
+      const reqId = ++filterReqRef.current;
+      setFiltering(true);
+      fetchJobs(jobFilters, activePrefs(on))
+        .then((res) => {
+          if (reqId !== filterReqRef.current) return;
+          replaceDeck(res.jobs);
+          setError(res.error);
+        })
+        .finally(() => {
+          if (reqId === filterReqRef.current) setFiltering(false);
+        });
+    },
+    [jobFilters, activePrefs, replaceDeck, profile],
+  );
 
   const reset = useCallback(() => {
     setNotesState({});
     setProfile(DEFAULT_SWIPE_PROFILE);
     setJobFilters({});
     setFiltering(true);
+    const reqId = ++filterReqRef.current;
     if (isLoggedIn) {
       // Logged in: Reset re-syncs from the server — it does NOT clear the
-      // saved pipeline (there is deliberately no delete endpoint).
+      // saved pipeline (there is deliberately no delete endpoint). No prefs
+      // on the fetch: the profile was just reset to the default, which has
+      // no preference tags, so no pref params belong on this request.
       Promise.all([fetchJobs(), fetchTrackedJobs()])
         .then(([feed, tracked]) => {
+          if (reqId !== filterReqRef.current) return;
           const trackedIds = new Set(tracked.jobs.map((j) => j.id));
           setJobs(
             withKnownScores([
@@ -742,20 +836,32 @@ export function SwipeStoreProvider({
           setError(feed.error);
           setPipelineError(tracked.error);
         })
-        .finally(() => setFiltering(false));
+        .finally(() => {
+          if (reqId === filterReqRef.current) setFiltering(false);
+        });
     } else {
       fetchJobs()
         .then((res) => {
+          if (reqId !== filterReqRef.current) return;
           setJobs(withKnownScores(res.jobs));
           setError(res.error);
         })
-        .finally(() => setFiltering(false));
+        .finally(() => {
+          if (reqId === filterReqRef.current) setFiltering(false);
+        });
     }
   }, [isLoggedIn, withKnownScores]);
 
   const queue = useMemo(
     () => jobs.filter((j) => j.status === "new"),
     [jobs],
+  );
+
+  // Summary of the PROFILE's preference tags (independent of the toggle) —
+  // null when the profile has none. UI shows toggle + captions from this.
+  const prefFilterSummary = useMemo(
+    () => prefFilterSummaryText(derivePrefFilterParams(profile)),
+    [profile],
   );
 
   const activeFilterCount = useMemo(
@@ -795,6 +901,9 @@ export function SwipeStoreProvider({
     jobFilters,
     activeFilterCount,
     filtering,
+    usePreferenceFilters,
+    prefFilterSummary,
+    setUsePreferenceFilters,
     queue,
     decide,
     setStatus,
