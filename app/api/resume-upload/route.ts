@@ -17,7 +17,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { getPool, sql } from "@/lib/db/sqlServer";
-import { extractResumeText } from "@/lib/resume/extractText";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -100,6 +99,9 @@ export async function POST(req: Request) {
   let resumeText: string | null = null;
   let textWarning: string | null = null;
   try {
+    // Lazy import: extraction is optional by design — if the library itself
+    // fails to load on this host, the upload must still store the file.
+    const { extractResumeText } = await import("@/lib/resume/extractText");
     const extracted = await extractResumeText(buffer, fileType);
     resumeText = extracted || null;
     if (!resumeText) textWarning = "No text could be extracted from the resume.";

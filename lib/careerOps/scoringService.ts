@@ -24,7 +24,6 @@ import {
 } from "@/lib/db/resumeRepository";
 import { getCachedScore, upsertScore } from "@/lib/db/scoresRepository";
 import { fetchJobById } from "@/lib/db/jobsRepository";
-import { extractResumeText } from "@/lib/resume/extractText";
 import { toCareerOpsAiScore, type CareerOpsAiScore } from "./aiScore";
 import type { ResumeProfile } from "./types";
 import type { JobListing } from "@/types/jobListing";
@@ -120,6 +119,9 @@ function buildCandidateProfile(
 async function ensureResumeText(resume: ResumeRecord): Promise<string> {
   if (resume.resumeText) return resume.resumeText;
   try {
+    // Lazy import: back-fill is optional — a broken extraction library on
+    // this host must not take down the scoring routes.
+    const { extractResumeText } = await import("@/lib/resume/extractText");
     const text = await extractResumeText(resume.resume, resume.fileType);
     if (text) {
       await updateResumeText(resume.id, text);
