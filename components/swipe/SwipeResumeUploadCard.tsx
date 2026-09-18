@@ -55,7 +55,10 @@ export function SwipeResumeUploadCard() {
       const data = await res.json();
 
       if (!res.ok || !data.ok) {
-        toast(data?.error ?? "Upload failed", "danger");
+        toast(
+          [data?.error ?? "Upload failed", data?.detail].filter(Boolean).join(" — "),
+          "danger",
+        );
         return;
       }
 
@@ -71,7 +74,14 @@ export function SwipeResumeUploadCard() {
         resumes: [...resumes, next],
         primaryResumeId: primaryResumeId ?? next.id,
       });
-      toast("Resume uploaded", "success");
+      // Stored-but-unreadable is the failure mode that quietly breaks AI
+      // scoring later, so it gets a warning rather than a clean success.
+      toast(
+        data.textExtracted
+          ? "Resume uploaded"
+          : "Resume stored, but no text could be read from it — AI scoring may not work",
+        data.textExtracted ? "success" : "warning",
+      );
     } catch {
       toast("Upload failed — check your connection", "danger");
     } finally {

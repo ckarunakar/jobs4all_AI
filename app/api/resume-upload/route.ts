@@ -44,8 +44,8 @@ function splitName(fullName: string): { first: string; last: string } {
   return { first: parts[0], last: parts.slice(1).join(" ") };
 }
 
-function fail(error: string, status = 400) {
-  return NextResponse.json({ ok: false, error }, { status });
+function fail(error: string, status = 400, detail?: string) {
+  return NextResponse.json({ ok: false, error, detail }, { status });
 }
 
 export async function POST(req: Request) {
@@ -147,7 +147,12 @@ export async function POST(req: Request) {
   } catch (err) {
     // Log id/message only — never the file bytes, email, or credentials.
     const message = err instanceof Error ? err.message : "Upload failed";
-    console.error(`[resume-upload] ${message}`);
-    return fail("Could not save the resume. Please try again.", 500);
+    console.error(
+      `[resume-upload] insert failed (${fileType}, ${file.size}B): ${message}`,
+    );
+    // `detail` carries the underlying message to the client on purpose: this
+    // route is session-gated, and an opaque "please try again" is what made
+    // the earlier production failure impossible to diagnose remotely.
+    return fail("Could not save the resume. Please try again.", 500, message);
   }
 }
