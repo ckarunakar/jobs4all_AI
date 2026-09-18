@@ -3,10 +3,10 @@
  * --------------------------------------------------------------------------
  * Reads scraped jobs from the single table ITJC_SCRAPPER.dbo.temp_tbl_Scrap_jobs
  * (descriptions are inline — no join) and maps rows to `JobListing`. The natural
- * key is `job_reference` (unique). Filtering (job type / city / recency / sort)
- * happens here in SQL with parameterized WHERE clauses — never in React. No user
- * input is ever concatenated into SQL; the table name and ORDER BY come from
- * fixed, allowlisted strings only.
+ * key is `job_reference` (unique). Filtering (job type / city / recency / skill
+ * / sort) happens here in SQL with parameterized WHERE clauses — never in React.
+ * No user input is ever concatenated into SQL; the table name and ORDER BY come
+ * from fixed, allowlisted strings only.
  */
 
 import "server-only";
@@ -184,7 +184,12 @@ export async function fetchJobListings(
     }
   }
 
-  // Skill keywords: whole-word match against title + description (ANY-match).
+  // Skill keywords: whole-word match against the DESCRIPTION only (ALL-match).
+  // A skill counts only when the posting spells it out in its own text — the
+  // title is not matchable, so a "Java Developer" whose description never says
+  // Java no longer qualifies, and neither does "Medical Assistant Registered /
+  // MA-R" for the skill "r". Every selected skill must appear, so the clauses
+  // AND together (the group still ANDs with all other active filters).
   // The full pattern (boundary classes included) is built in Node and bound
   // as one parameter; the haystack is space-padded so boundaries work at the
   // start/end of the text.
@@ -192,9 +197,9 @@ export async function fetchJobListings(
   if (skills.length > 0) {
     const clauses = skills.map((s, i) => {
       request.input(`skill${i}`, sql.NVarChar, skillPattern(s));
-      return `(' ' + Title + ' ' + ISNULL(description, '') + ' ') LIKE @skill${i} ESCAPE '\\'`;
+      return `(' ' + ISNULL(description, '') + ' ') LIKE @skill${i} ESCAPE '\\'`;
     });
-    where.push(`(${clauses.join(" OR ")})`);
+    where.push(`(${clauses.join(" AND ")})`);
   }
 
   // Preference baseline (2026-09-04 spec): three independent OR-groups,
