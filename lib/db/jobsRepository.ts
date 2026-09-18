@@ -7,6 +7,11 @@
  * happens here in SQL with parameterized WHERE clauses — never in React. No user
  * input is ever concatenated into SQL; the table name and ORDER BY come from
  * fixed, allowlisted strings only.
+ *
+ * The feed is IT-only: the scraper table also carries non-IT postings (~89% of
+ * rows), which `IsIT`/`ITScore` separate — see MIN_IT_SCORE. Every feed query
+ * gates on it. Lookups of a specific job (fetchJobById, fetchTrackedJobListings)
+ * do NOT — a job already in someone's pipeline must still resolve.
  */
 
 import "server-only";
@@ -19,6 +24,26 @@ const JOBS_TABLE = "ITJC_SCRAPPER.dbo.temp_tbl_Scrap_jobs";
 
 const MAX_LIMIT = 200;
 const DEFAULT_LIMIT = 100;
+
+/**
+ * IT-only feed threshold. The scraper's own `IsIT` flag is exactly
+ * `ITScore >= 3`, and that last point is where the noise lives: "Membership
+ * Sales Specialist", "Director - Interior Design" and "Plant Health Care
+ * Technician / Stump Grinder" all score exactly 3. Requiring 4 drops those
+ * 3,607 borderline rows (22,606 -> 18,999 jobs) while losing only 4 of the
+ * 5,766 postings whose title says software engineer / developer / data
+ * scientist / devops. Measured against the live table 2026-09-17.
+ *
+ * Lower this to 3 to fall back to the scraper's own definition.
+ */
+const MIN_IT_SCORE = 4;
+
+/**
+ * Fixed predicate restricting a query to IT postings. Both halves are
+ * deliberate: `IsIT` keeps us aligned with the scraper if it ever redefines
+ * the flag, `ITScore` applies our stricter bar. Contains no user input.
+ */
+const IT_ONLY = `IsIT = 1 AND ITScore >= ${MIN_IT_SCORE}`;
 
 function toIso(v: unknown): string | undefined {
   if (!v) return undefined;
@@ -146,7 +171,7 @@ export async function fetchJobListings(
   const request = pool.request();
   request.input("limit", sql.Int, limit);
 
-  const where: string[] = ["Title IS NOT NULL"];
+  const where: string[] = ["Title IS NOT NULL", IT_ONLY];
 
   if (filters.search) {
     request.input("search", sql.NVarChar, `%${filters.search}%`);
@@ -168,7 +193,8 @@ export async function fetchJobListings(
     } else {
       const distinct = await pool.request().query<{ job_type: string }>(
         `SELECT DISTINCT job_type FROM ${JOBS_TABLE}
-          WHERE job_type IS NOT NULL AND LTRIM(RTRIM(job_type)) <> ''`,
+          WHERE ${IT_ONLY}
+            AND job_type IS NOT NULL AND LTRIM(RTRIM(job_type)) <> ''`,
       );
       const variants = distinct.recordset
         .map((r) => String(r.job_type))
@@ -323,7 +349,8 @@ export async function fetchFilterOptions(
   const jobTypesRes = await pool.request().query<{ job_type: string }>(
     `SELECT DISTINCT job_type
        FROM ${JOBS_TABLE}
-      WHERE job_type IS NOT NULL AND LTRIM(RTRIM(job_type)) <> ''`,
+      WHERE ${IT_ONLY}
+        AND job_type IS NOT NULL AND LTRIM(RTRIM(job_type)) <> ''`,
   );
   const presentCategories = new Set(
     jobTypesRes.recordset.map((r) => classifyJobType(r.job_type)),
@@ -337,7 +364,8 @@ export async function fetchFilterOptions(
   COMMON_CITIES.forEach((c, i) => commonReq.input(`c${i}`, sql.NVarChar(200), c));
   const placeholders = COMMON_CITIES.map((_, i) => `@c${i}`).join(", ");
   const commonRes = await commonReq.query<{ city: string }>(
-    `SELECT DISTINCT city FROM ${JOBS_TABLE} WHERE city IN (${placeholders})`,
+    `SELECT DISTINCT city FROM ${JOBS_TABLE}
+      WHERE ${IT_ONLY} AND city IN (${placeholders})`,
   );
   const present = new Set(commonRes.recordset.map((r) => String(r.city)));
   const commonCities = COMMON_CITIES.filter((c) => present.has(c));
@@ -352,7 +380,8 @@ export async function fetchFilterOptions(
       .query<{ city: string }>(
         `SELECT DISTINCT TOP 20 city
            FROM ${JOBS_TABLE}
-          WHERE city IS NOT NULL AND LTRIM(RTRIM(city)) <> '' AND city LIKE @q
+          WHERE ${IT_ONLY}
+            AND city IS NOT NULL AND LTRIM(RTRIM(city)) <> '' AND city LIKE @q
           ORDER BY city`,
       );
     cities = cityRes.recordset.map((r) => String(r.city));
