@@ -264,8 +264,8 @@ export function JobFilterButton() {
               placeholder="e.g. python, react, c++…"
             />
             <p className="text-xs text-muted-foreground">
-              Matches whole words in the job title and description — e.g.
-              python, react, c++
+              Every skill you add must appear as a whole word in the job
+              description — e.g. python, react, c++
             </p>
           </div>
 
