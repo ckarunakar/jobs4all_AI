@@ -23,8 +23,9 @@ export default function SupportPage() {
         <Link href="/settings" className="font-medium text-accent hover:underline">
           itjobcafe.ai/settings
         </Link>{" "}
-        or in the app&apos;s Settings tab. You&apos;ll be asked for your
-        password to confirm. Deletion is immediate and permanent.
+        or in the app&apos;s Settings tab. You&apos;ll be asked to confirm with
+        your password, or with your email address if your account has no
+        password. Deletion is immediate and permanent.
       </p>
 
       <h2 className={LEGAL_H2}>Privacy</h2>
