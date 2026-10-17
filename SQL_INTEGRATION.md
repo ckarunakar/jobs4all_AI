@@ -134,6 +134,16 @@ returns the pipeline (TOP 500, newest first, live join with snapshot
 fallback); `POST /api/jobs/seen/import` is the one-time localStorage import
 on login. Guests stay localStorage-only.
 
+## Mobile sessions and account deletion (write)
+
+The native app signs in with `POST /api/mobile/login` and gets an opaque
+Bearer token; the server stores only its SHA-256 hash in `mobile_sessions`
+(run `database/setup/create-mobile-sessions.sql` once, before deploying).
+Sessions slide to 90 days from last use; `POST /api/mobile/logout` deletes
+the row. `POST /api/account/delete` (cookie or Bearer, password re-entry)
+deletes the user's rows from `mobile_sessions`, `user_job_seen`,
+`career_ops_scores`, `resume_upload` and `login_users` in one transaction.
+
 ## Career-Ops AI scoring (manual, top 10)
 
 On `/swipe` a **"Score top 10 jobs with AI"** button compares the user's most recent uploaded
@@ -166,11 +176,14 @@ at 10; DB-cached so re-clicks don't re-call the model).
 ## Read-only guarantee
 
 - The **job feed is read-only** — only `SELECT` runs against `ITJC`. The **only writes** in the whole
-  app are in `ITJC_SCRAPPER`: the resume upload (`INSERT`/`UPDATE ResumeText` on
-  `resume_upload`), the AI score cache (`MERGE` into `career_ops_scores`), and the
+  app are in `ITJC_SCRAPPER`: accounts (`login_users` — sign-up, Google upsert,
+  last-login), the resume upload (`INSERT`/`UPDATE ResumeText` on
+  `resume_upload`), the AI score cache (`MERGE` into `career_ops_scores`), the
   per-user pipeline state (`MERGE` into `user_job_seen` — status, notes, and a
-  title/company/location/url snapshot per swiped job). All are parameterized.
-  No delete/truncate, and the stored procedure that processes jobs is **never** called.
+  title/company/location/url snapshot per swiped job), mobile app sessions
+  (`mobile_sessions`), and account deletion (`DELETE` of one user's rows across
+  those five tables). All are parameterized. No truncate, and the stored
+  procedure that processes jobs is **never** called.
 - `lib/db/*` import `server-only`, so DB code can never be bundled into client JS. The DB routes
   are dynamic server routes (`ƒ`), and credentials are never logged (only server/db/host).
 
