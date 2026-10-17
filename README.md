@@ -9,6 +9,11 @@ submitted automatically.
 ## Features
 
 - **Auth** — email/password (bcrypt) and optional Google OAuth via NextAuth v5. Browsing the job feed is public; an account is needed for AI scoring, seen-history sync, and the dashboard/tracker/profile pages.
+- **Mobile API** — the native app signs in with `POST /api/mobile/login`
+  (email/password) and sends `Authorization: Bearer <token>` to the same API
+  routes the website uses. Tokens are opaque, stored only as SHA-256 hashes in
+  `mobile_sessions`, and expire after 90 days without use
+  (`GET /api/mobile/me`, `POST /api/mobile/logout`).
 - **Swipe feed** — jobs read server-side from SQL Server with filters (type,
   city, recency, skill keywords, plus an always-on preference baseline from the profile); per-user seen-history so reviewed jobs don't resurface.
 - **Resume upload** — .pdf/.docx stored in SQL Server; text extracted
