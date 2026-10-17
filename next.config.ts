@@ -8,7 +8,8 @@ const nextConfig: NextConfig = {
   },
   // Resume text extraction (server-only). Keep these native/pdfjs-heavy
   // packages out of the bundler so they load as normal Node modules.
-  serverExternalPackages: ["pdf-parse", "mammoth", "pdfjs-dist"],
+  // mssql too: bundling it per layer (pages vs route handlers) makes two driver instances share the one globalThis pool → "type.validate is not a function".
+  serverExternalPackages: ["pdf-parse", "mammoth", "pdfjs-dist", "mssql"],
 };
 
 export default nextConfig;
