@@ -14,6 +14,9 @@ submitted automatically.
   routes the website uses. Tokens are opaque, stored only as SHA-256 hashes in
   `mobile_sessions`, and expire after 90 days without use
   (`GET /api/mobile/me`, `POST /api/mobile/logout`).
+- **Account deletion** — Settings → Delete account (or `POST /api/account/delete`
+  from the app) permanently removes the account and all of its data after the
+  user re-enters their password.
 - **Swipe feed** — jobs read server-side from SQL Server with filters (type,
   city, recency, skill keywords, plus an always-on preference baseline from the profile); per-user seen-history so reviewed jobs don't resurface.
 - **Resume upload** — .pdf/.docx stored in SQL Server; text extracted

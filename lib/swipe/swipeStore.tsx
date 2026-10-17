@@ -179,7 +179,12 @@ function sortScoredFirst(list: SwipeJob[]): SwipeJob[] {
 
 // v2: profile now starts empty (was the "Jordan Lee" sample profile in v1).
 // Bumping the key discards old persisted state so the blank profile takes effect.
-const STORAGE_KEY = "itjobcafe.swipe.v2";
+export const STORAGE_KEY = "itjobcafe.swipe.v2";
+
+/** Per-account flag marking the one-time localStorage → server import as done. */
+export function importFlagKey(email: string): string {
+  return `itjobcafe.swipe.imported.${email}`;
+}
 
 interface Persisted {
   statuses: Record<string, SwipeJobStatus>;
@@ -372,7 +377,7 @@ export function SwipeStoreProvider({
     // pipeline (the import flag is per-email; the payload itself is not).
     async function maybeImport(): Promise<void> {
       if (!isLoggedIn || !sessionEmail) return;
-      const importKey = `itjobcafe.swipe.imported.${sessionEmail}`;
+      const importKey = importFlagKey(sessionEmail);
       try {
         if (localStorage.getItem(importKey)) return;
       } catch {

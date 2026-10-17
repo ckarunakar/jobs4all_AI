@@ -1,7 +1,9 @@
 import { UserRound } from "lucide-react";
 import { auth } from "@/auth";
+import { getUserById } from "@/lib/auth/users";
 import { SwipeShell } from "@/components/swipe/SwipeShell";
 import { IntegrationStatusCard } from "@/components/settings/IntegrationStatusCard";
+import { DeleteAccountCard } from "@/components/settings/DeleteAccountCard";
 import { SignOutButton } from "@/components/auth/SignOutButton";
 
 export default async function SettingsPage() {
@@ -10,6 +12,13 @@ export default async function SettingsPage() {
   const email = session?.user?.email?.trim();
   const who =
     name && email ? `${name} (${email})` : (email ?? name ?? "your account");
+
+  // Which confirmation the delete dialog asks for (password vs. typed email).
+  // A DB hiccup hides the card rather than breaking the page.
+  const userId = session?.user?.id ? Number(session.user.id) : NaN;
+  const user = Number.isInteger(userId)
+    ? await getUserById(userId).catch(() => null)
+    : null;
 
   return (
     <SwipeShell title="Settings" description="Manage your account">
@@ -23,6 +32,12 @@ export default async function SettingsPage() {
         >
           <SignOutButton />
         </IntegrationStatusCard>
+        {user && (
+          <DeleteAccountCard
+            email={user.email}
+            hasPassword={Boolean(user.emailPasswordEnabled && user.passwordHash)}
+          />
+        )}
       </div>
     </SwipeShell>
   );
