@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { auth, googleConfigured } from "@/auth";
 import { Logo } from "@/components/layout/Logo";
 import { LoginForm } from "@/components/auth/LoginForm";
+import { LegalLinks } from "@/components/legal/LegalLinks";
 
 export const metadata = { title: "Log in · ITJobCafe" };
 
@@ -36,6 +37,7 @@ export default async function LoginPage() {
             Create an account
           </Link>
         </p>
+        <LegalLinks className="mt-6" />
       </div>
     </main>
   );

@@ -5,6 +5,7 @@ import { SwipeShell } from "@/components/swipe/SwipeShell";
 import { IntegrationStatusCard } from "@/components/settings/IntegrationStatusCard";
 import { DeleteAccountCard } from "@/components/settings/DeleteAccountCard";
 import { SignOutButton } from "@/components/auth/SignOutButton";
+import { LegalLinks } from "@/components/legal/LegalLinks";
 
 export default async function SettingsPage() {
   const session = await auth();
@@ -38,6 +39,7 @@ export default async function SettingsPage() {
             hasPassword={Boolean(user.emailPasswordEnabled && user.passwordHash)}
           />
         )}
+        <LegalLinks className="pt-2" />
       </div>
     </SwipeShell>
   );

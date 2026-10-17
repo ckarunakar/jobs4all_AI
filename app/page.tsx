@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { auth } from "@/auth";
 import { Logo } from "@/components/layout/Logo";
+import { LegalLinks } from "@/components/legal/LegalLinks";
 import { Button } from "@/components/ui/button";
 import { Landing } from "@/components/landing/Landing";
 
@@ -33,6 +34,7 @@ export default async function LandingPage() {
           <p className="font-medium">
             AI-ranked job discovery for students and new grads
           </p>
+          <LegalLinks />
         </div>
       </footer>
     </div>
