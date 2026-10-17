@@ -3,12 +3,12 @@
  *   POST { jobReference, status, notes?, snapshot? } → upsert the logged-in
  *   user's state for one job ("action" accepted as a legacy alias for status).
  *
- * Requires a session (auth()). The user id comes from the session, never
- * the client. Parameterized SQL only.
+ * Requires a signed-in user (website cookie or app Bearer token, via
+ * lib/auth/requestUser). The user id never comes from the client. Parameterized SQL only.
  */
 
 import { NextResponse } from "next/server";
-import { auth } from "@/auth";
+import { getRequestUser } from "@/lib/auth/requestUser";
 import {
   isPipelineStatus,
   upsertJobState,
@@ -43,8 +43,8 @@ function parseSnapshot(v: unknown): JobSnapshot | undefined {
 }
 
 export async function POST(req: Request) {
-  const session = await auth();
-  const loginUserId = session?.user?.id ? Number(session.user.id) : undefined;
+  const user = await getRequestUser(req);
+  const loginUserId = user?.id;
   if (!loginUserId) {
     return NextResponse.json(
       { ok: false, error: "Not authenticated" },

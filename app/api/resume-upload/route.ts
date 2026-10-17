@@ -4,7 +4,7 @@
  * Accepts multipart/form-data with:
  *   resume   (File, required)  — the .pdf or .docx
  *   fullName (string)          — split into FirstName / LastName
- *   email    (string, required)
+ *   email    (ignored — the signed-in account's email is used)
  *   phone    (string, optional)
  *   jobTitle (string, optional)
  *   jobId    (string, optional)
@@ -15,7 +15,7 @@
  */
 
 import { NextResponse } from "next/server";
-import { auth } from "@/auth";
+import { getRequestUser } from "@/lib/auth/requestUser";
 import { getPool, sql } from "@/lib/db/sqlServer";
 
 export const runtime = "nodejs";
@@ -49,12 +49,13 @@ function fail(error: string, status = 400, detail?: string) {
 }
 
 export async function POST(req: Request) {
-  // Require login — the resume is tied to the logged-in user.
-  const session = await auth();
-  if (!session?.user) {
+  // Require login (website cookie or app Bearer token) — the resume is tied
+  // to the signed-in user.
+  const user = await getRequestUser(req);
+  if (!user) {
     return fail("Please log in to upload a resume.", 401);
   }
-  const loginUserId = session.user.id ? Number(session.user.id) : null;
+  const loginUserId = user.id;
 
   let form: FormData;
   try {
@@ -63,9 +64,8 @@ export async function POST(req: Request) {
     return fail("Expected multipart/form-data.");
   }
 
-  // The logged-in email is authoritative (avoids uploading under a stray email);
-  // fall back to the form value only if the session somehow has none.
-  const email = (session.user.email ?? String(form.get("email") ?? "")).trim();
+  // The signed-in email is authoritative (avoids uploading under a stray email).
+  const email = user.email;
   const fullName = String(form.get("fullName") ?? "").trim();
   const phone = String(form.get("phone") ?? "").trim();
   const jobTitle = String(form.get("jobTitle") ?? "").trim();

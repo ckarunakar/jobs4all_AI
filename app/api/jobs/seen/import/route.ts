@@ -5,7 +5,7 @@
  */
 
 import { NextResponse } from "next/server";
-import { auth } from "@/auth";
+import { getRequestUser } from "@/lib/auth/requestUser";
 import {
   importJobStates,
   isPipelineStatus,
@@ -19,8 +19,8 @@ const MAX_ENTRIES = 500;
 const MAX_NOTES = 20_000;
 
 export async function POST(req: Request) {
-  const session = await auth();
-  const loginUserId = session?.user?.id ? Number(session.user.id) : undefined;
+  const user = await getRequestUser(req);
+  const loginUserId = user?.id;
   if (!loginUserId) {
     return NextResponse.json(
       { ok: false, error: "Not authenticated" },
