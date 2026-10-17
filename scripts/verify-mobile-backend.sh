@@ -5,6 +5,9 @@
 # Usage: scripts/verify-mobile-backend.sh [BASE_URL]
 #   BASE_URL defaults to http://localhost:3000. Needs curl + jq.
 #
+#        ALLOW_ANY_EMAIL=1 VERIFY_EMAIL=<non-example.com address> scripts/verify-mobile-backend.sh
+#   Refuses to run unless the account is @example.com or ALLOW_ANY_EMAIL=1.
+#
 # Uses the account $VERIFY_EMAIL / $VERIFY_PASSWORD (defaults below), creating
 # it if needed, and DELETES it in the final section. Stops at the first failed
 # check, so it is safe to re-run while features are still being built: the
@@ -21,6 +24,10 @@ set -uo pipefail
 BASE="${1:-http://localhost:3000}"
 EMAIL="${VERIFY_EMAIL:-mobile-verify@example.com}"
 PASSWORD="${VERIFY_PASSWORD:-Verify-Mobile-2026x}"
+if [[ "$EMAIL" != *@example.com && "${ALLOW_ANY_EMAIL:-}" != "1" ]]; then
+  echo "Refusing to run: this script DELETES the account $EMAIL. Use an @example.com address, or set ALLOW_ANY_EMAIL=1."
+  exit 2
+fi
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
 BODY="$WORK/body.json"

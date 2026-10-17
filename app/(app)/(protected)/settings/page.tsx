@@ -15,10 +15,17 @@ export default async function SettingsPage() {
     name && email ? `${name} (${email})` : (email ?? name ?? "your account");
 
   // Which confirmation the delete dialog asks for (password vs. typed email).
-  // A DB hiccup hides the card rather than breaking the page.
+  // A DB failure hides the card rather than breaking the page, but is logged.
   const userId = session?.user?.id ? Number(session.user.id) : NaN;
   const user = Number.isInteger(userId)
-    ? await getUserById(userId).catch(() => null)
+    ? await getUserById(userId).catch((err) => {
+        console.error(
+          `[settings] getUserById failed for user ${userId}: ${
+            err instanceof Error ? err.message : String(err)
+          }`,
+        );
+        return null;
+      })
     : null;
 
   return (

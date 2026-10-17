@@ -24,6 +24,12 @@ export async function POST(req: Request) {
       return noStoreJson({ ok: false, error: "Not authenticated" }, 401);
     }
 
+    // A cross-site form can't send application/json without a CORS preflight.
+    const contentType = req.headers.get("content-type") ?? "";
+    if (!contentType.toLowerCase().startsWith("application/json")) {
+      return noStoreJson({ ok: false, error: "Invalid JSON body." }, 400);
+    }
+
     let body: { password?: unknown; confirmEmail?: unknown };
     try {
       body = await req.json();

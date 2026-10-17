@@ -140,7 +140,7 @@ The native app signs in with `POST /api/mobile/login` and gets an opaque
 Bearer token; the server stores only its SHA-256 hash in `mobile_sessions`
 (run `database/setup/create-mobile-sessions.sql` once, before deploying).
 Sessions slide to 90 days from last use; `POST /api/mobile/logout` deletes
-the row. `POST /api/account/delete` (cookie or Bearer, password re-entry)
+the row. `POST /api/account/delete` (cookie or Bearer; confirmed by password, or by typed email for accounts without a password)
 deletes the user's rows from `mobile_sessions`, `user_job_seen`,
 `career_ops_scores`, `resume_upload` and `login_users` in one transaction.
 
@@ -173,7 +173,7 @@ at 10; DB-cached so re-clicks don't re-call the model).
   intern / new-grad matching — see the attribution in
   [`lib/scoring/careerOpsPrompt.ts`](lib/scoring/careerOpsPrompt.ts).
 
-## Read-only guarantee
+## Read-only feed; app-owned writes
 
 - The **job feed is read-only** — only `SELECT` runs against `ITJC`. The **only writes** in the whole
   app are in `ITJC_SCRAPPER`: accounts (`login_users` — sign-up, Google upsert,

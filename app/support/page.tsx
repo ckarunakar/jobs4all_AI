@@ -25,7 +25,9 @@ export default function SupportPage() {
         </Link>{" "}
         or in the app&apos;s Settings tab. You&apos;ll be asked to confirm with
         your password, or with your email address if your account has no
-        password. Deletion is immediate and permanent.
+        password. If you can&apos;t remember your password, email us at{" "}
+        <ContactEmail /> and we&apos;ll delete the account for you. Deletion is
+        immediate and permanent.
       </p>
 
       <h2 className={LEGAL_H2}>Privacy</h2>

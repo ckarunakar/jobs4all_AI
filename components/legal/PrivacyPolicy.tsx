@@ -82,8 +82,9 @@ export function PrivacyPolicy() {
       <p className={LEGAL_P}>
         <strong>Stored only on your device:</strong> your profile and job
         preferences (such as preferred locations, roles and technologies) are
-        kept in your browser&apos;s or app&apos;s local storage, not on our
-        servers.
+        kept in your browser&apos;s or app&apos;s local storage, not in our
+        database. They are sent to our server and to the AI provider when you
+        ask for a job to be scored, and are used only to produce that score.
       </p>
 
       <h2 className={LEGAL_H2}>How we use it</h2>
@@ -102,10 +103,12 @@ export function PrivacyPolicy() {
       <ul className={LEGAL_UL}>
         <li>
           <strong>AI scoring providers — Anthropic and DeepSeek.</strong> When a
-          job is scored, we send your resume text (including any contact
-          details written in your resume) and the job description to one of
-          these providers, which returns the score. They process it under their
-          own terms.
+          job is scored, we send one of these providers your resume text
+          (including any contact details written in your resume), the job
+          description, and these profile details: your name, school, major,
+          graduation date, work authorization, skills, and target roles and
+          locations. The provider returns the score and processes the data
+          under its own terms.
         </li>
         <li>
           <strong>Our hosting provider,</strong> which runs the servers and

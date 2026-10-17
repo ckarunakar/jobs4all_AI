@@ -16,7 +16,8 @@ submitted automatically.
   (`GET /api/mobile/me`, `POST /api/mobile/logout`).
 - **Account deletion** — Settings → Delete account (or `POST /api/account/delete`
   from the app) permanently removes the account and all of its data after the
-  user re-enters their password.
+  user confirms with their password (or, for accounts without a password, by
+  typing their email address).
 - **Swipe feed** — jobs read server-side from SQL Server with filters (type,
   city, recency, skill keywords, plus an always-on preference baseline from the profile); per-user seen-history so reviewed jobs don't resurface.
 - **Resume upload** — .pdf/.docx stored in SQL Server; text extracted
