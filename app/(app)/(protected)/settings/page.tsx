@@ -1,8 +1,11 @@
 import { UserRound } from "lucide-react";
 import { auth } from "@/auth";
+import { getUserById } from "@/lib/auth/users";
 import { SwipeShell } from "@/components/swipe/SwipeShell";
 import { IntegrationStatusCard } from "@/components/settings/IntegrationStatusCard";
+import { DeleteAccountCard } from "@/components/settings/DeleteAccountCard";
 import { SignOutButton } from "@/components/auth/SignOutButton";
+import { LegalLinks } from "@/components/legal/LegalLinks";
 
 export default async function SettingsPage() {
   const session = await auth();
@@ -10,6 +13,20 @@ export default async function SettingsPage() {
   const email = session?.user?.email?.trim();
   const who =
     name && email ? `${name} (${email})` : (email ?? name ?? "your account");
+
+  // Which confirmation the delete dialog asks for (password vs. typed email).
+  // A DB failure hides the card rather than breaking the page, but is logged.
+  const userId = session?.user?.id ? Number(session.user.id) : NaN;
+  const user = Number.isInteger(userId)
+    ? await getUserById(userId).catch((err) => {
+        console.error(
+          `[settings] getUserById failed for user ${userId}: ${
+            err instanceof Error ? err.message : String(err)
+          }`,
+        );
+        return null;
+      })
+    : null;
 
   return (
     <SwipeShell title="Settings" description="Manage your account">
@@ -23,6 +40,13 @@ export default async function SettingsPage() {
         >
           <SignOutButton />
         </IntegrationStatusCard>
+        {user && (
+          <DeleteAccountCard
+            email={user.email}
+            hasPassword={Boolean(user.emailPasswordEnabled && user.passwordHash)}
+          />
+        )}
+        <LegalLinks className="pt-2" />
       </div>
     </SwipeShell>
   );

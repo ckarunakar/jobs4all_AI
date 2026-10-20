@@ -11,11 +11,10 @@
 import NextAuth from "next-auth";
 import Google from "next-auth/providers/google";
 import Credentials from "next-auth/providers/credentials";
-import bcrypt from "bcryptjs";
+import { verifyCredentials } from "@/lib/auth/credentials";
 import {
   getUserByEmail,
   normalizeEmail,
-  updateLastLogin,
   upsertGoogleUser,
 } from "@/lib/auth/users";
 
@@ -38,18 +37,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
-        const email = normalizeEmail(String(credentials?.email ?? ""));
-        const password = String(credentials?.password ?? "");
-        if (!email || !password) return null;
-
-        const user = await getUserByEmail(email);
-        if (!user || !user.emailPasswordEnabled || !user.passwordHash) {
-          return null;
-        }
-        const valid = await bcrypt.compare(password, user.passwordHash);
-        if (!valid) return null;
-
-        await updateLastLogin(user.id);
+        const user = await verifyCredentials(
+          String(credentials?.email ?? ""),
+          String(credentials?.password ?? ""),
+        );
+        if (!user) return null;
         return {
           id: String(user.id),
           email: user.email,

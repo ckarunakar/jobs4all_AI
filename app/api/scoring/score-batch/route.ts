@@ -9,7 +9,7 @@
  */
 
 import { NextResponse } from "next/server";
-import { auth } from "@/auth";
+import { getRequestUser } from "@/lib/auth/requestUser";
 import {
   NoResumeError,
   scoreTopForEmail,
@@ -28,8 +28,8 @@ interface Body {
 }
 
 export async function POST(req: Request) {
-  const session = await auth();
-  if (!session?.user) {
+  const user = await getRequestUser(req);
+  if (!user) {
     return NextResponse.json(
       { ok: false, error: "Sign in to score jobs." },
       { status: 401 },
@@ -53,9 +53,9 @@ export async function POST(req: Request) {
     );
   }
 
-  // --- Real-jobs flow: identity from the logged-in session.
-  const userId = session.user.id ? Number(session.user.id) : undefined;
-  const email = session.user.email ?? undefined;
+  // --- Real-jobs flow: identity from the signed-in user (cookie or Bearer).
+  const userId = user.id;
+  const email = user.email;
   try {
     const { results, cachedCount, scoredCount, provider, model } =
       await scoreTopForEmail({

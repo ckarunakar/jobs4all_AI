@@ -5,15 +5,15 @@
  */
 
 import { NextResponse } from "next/server";
-import { auth } from "@/auth";
+import { getRequestUser } from "@/lib/auth/requestUser";
 import { fetchTrackedJobListings } from "@/lib/db/jobsRepository";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export async function GET() {
-  const session = await auth();
-  const loginUserId = session?.user?.id ? Number(session.user.id) : undefined;
+export async function GET(req: Request) {
+  const user = await getRequestUser(req);
+  const loginUserId = user?.id;
   if (!loginUserId) {
     return NextResponse.json(
       { ok: false, error: "Not authenticated" },

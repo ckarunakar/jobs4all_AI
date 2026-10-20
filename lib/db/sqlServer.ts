@@ -1,12 +1,13 @@
 /**
- * SQL Server connection — SERVER-SIDE ONLY, READ-ONLY.
+ * SQL Server connection — SERVER-SIDE ONLY.
  * --------------------------------------------------------------------------
  * A single pooled `mssql` connection reused across requests (cached on
  * globalThis so it survives Next.js HMR in dev). Config comes from env only;
  * credentials are never logged and never bundled to the client (`server-only`).
  *
- * The app never writes: no insert/update/delete/truncate/merge/exec. Only
- * SELECT queries run through this pool.
+ * The job feed is read-only. App-owned writes (accounts, resumes, scores,
+ * pipeline state, mobile sessions, account deletion) are listed in
+ * SQL_INTEGRATION.md — all parameterized, never against the scraper's tables.
  */
 
 import "server-only";

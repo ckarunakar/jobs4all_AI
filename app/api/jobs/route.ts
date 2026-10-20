@@ -10,7 +10,7 @@
  */
 
 import { NextResponse } from "next/server";
-import { auth } from "@/auth";
+import { getRequestUser, hasBearer } from "@/lib/auth/requestUser";
 import { fetchJobListings } from "@/lib/db/jobsRepository";
 import type {
   JobFilters,
@@ -81,10 +81,18 @@ export async function GET(req: Request) {
     sort: parseSort(searchParams.get("sort")),
   };
 
-  // Logged-in users get their already-seen jobs excluded (SQL-side). /swipe is
-  // protected, so this is the normal path; unauthenticated calls still work.
-  const session = await auth();
-  const loginUserId = session?.user?.id ? Number(session.user.id) : undefined;
+  // Signed-in users (website cookie or app Bearer token) get their already-seen
+  // jobs excluded (SQL-side); guests still get the feed. A Bearer token that
+  // doesn't resolve is a 401, so the app notices an expired login instead of
+  // silently falling back to guest results.
+  const user = await getRequestUser(req);
+  if (!user && hasBearer(req)) {
+    return NextResponse.json(
+      { ok: false, error: "Not authenticated" },
+      { status: 401 },
+    );
+  }
+  const loginUserId = user?.id;
 
   try {
     const jobs = await fetchJobListings(filters, loginUserId);
