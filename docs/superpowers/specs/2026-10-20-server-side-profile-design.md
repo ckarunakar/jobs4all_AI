@@ -59,6 +59,8 @@ The document is the existing `ResumeProfile` type (`lib/careerOps/types.ts`), mi
 - **`remotePreferences`:** only `remote` / `hybrid` / `onsite`.
 - **`workAuthorization`:** only the `WorkAuthorization` values; anything else becomes `"unspecified"`.
 - **`resumes`:** at most 20 entries with the `ResumeFileRef` fields. These are labels and ids for files already in `resume_upload`; the files themselves don't move.
+  - On PUT, an entry's `dbId` is kept only if it is one of **this account's** `resume_upload` rows: `LoginUserID = @id OR Email = @email`, the same rule as `deleteAccount`. This takes one extra query.
+  - Any other `dbId` is removed, but the entry stays. This stops the app from ever following a stored id into someone else's file (my call).
 - **`primaryResumeId`:** optional string.
 - **Total size:** the serialized document is at most 64 KB.
 
@@ -75,28 +77,45 @@ Both routes use `getRequestUser(req)` (`lib/auth/requestUser.ts`). They work wit
 
 All changes are inside `SwipeStoreProvider` (`lib/swipe/swipeStore.tsx`); no UI component changes.
 
-The browser copy gains two pieces of bookkeeping in the `itjobcafe.swipe.v2` blob, both backward-compatible and absent in old data:
+The browser copy gains two new fields in the `itjobcafe.swipe.v2` blob. Both are backward-compatible and absent from old data.
 
-- **Owner:** the profile's existing `email` field already records whose profile it is, because the website forces the signed-in email onto it. A blank email means a guest-era profile.
-- **`profileDirty: boolean`:** true while this browser has edits the server hasn't confirmed.
+- **`profileOwner: string`:** the lowercased email of the account this browser copy belongs to. `""` means a guest-era profile.
+  - It is a **separate field, not `profile.email`** (my call). The current hydration code stamps the signed-in email onto `profile.email` and persists it, so using `profile.email` would let the shared-computer guard relabel A's profile as B's. The website still forces the signed-in email onto the in-memory profile for display and scoring, as today.
+  - **Legacy data:** when `profileOwner` is absent, read the owner from the stored `profile.email`. Read it **before** the seeding step overwrites it. For a pre-update browser, that email is the last account that was signed in there.
+  - The owner is set to the current account whenever the browser copy is synced with the server: after a GET is applied, or after a successful upload.
+- **`profileDirty: boolean`:** true while this browser has edits for `profileOwner` that the server hasn't confirmed.
 
-**On load, when signed in** (in the existing hydration effect, before the first job fetch so preference filters use the right profile):
+The persist effect (`swipeStore.tsx`, the `localStorage.setItem` effect) is the **only writer** of the blob. Both its signed-in and guest paths carry `profileOwner` and `profileDirty` through unchanged unless sync logic set them. Races between two open tabs of the same browser are accepted: last write wins, as today (my call).
+
+"Filled in" means **any profile field differs from `DEFAULT_SWIPE_PROFILE`**, ignoring `email`. That includes `workAuthorization` other than `"unspecified"` and a non-empty resume list. A preference switch on its own doesn't count (my call).
+
+**Sync runs whenever the signed-in account is set or changes:** every run of the existing hydration effect, keyed on `sessionEmail` / `isLoggedIn`, not only full page loads. It goes in that effect before the first job fetch, so the preference filters use the resolved profile. Steps:
 
 1. `GET /api/profile`.
 2. **The server has a profile:**
-   - If the browser copy is dirty **and** its owner is this account, the browser wins. Upload it with PUT, then clear dirty. This covers edits made while a save was failing.
+   - If the browser copy is dirty **and** owned by this account, the browser wins. Upload it with PUT, then clear dirty. This covers edits made while a save was failing.
    - Otherwise the server wins and replaces the browser copy.
+   - A guest-era copy loses here. Guests can't open the Profile tab (`app/(app)/(protected)/layout.tsx`), so the most a guest can lose is the preference switch (accepted).
 3. **The server has no profile:**
-   - If the browser copy has anything filled in (any field besides `email`, or any resume) **and** its owner is blank or this account (case-insensitive), copy it up with PUT. This is the one-time move for existing users.
+   - If the browser copy is filled in **and** its owner is `""` or this account, copy it up with PUT. This is the one-time move for existing users.
    - Otherwise start blank.
-   - **A browser profile owned by a different email is never uploaded.** That is the shared-computer guard.
-4. **GET fails** (network error or 5xx): use the browser copy as today, upload nothing, and try again on the next load.
+   - **A browser copy owned by a different account is never uploaded.**
+4. **GET fails** (network error, 5xx or 401):
+   - If the owner is `""` or this account, use the browser copy as today.
+   - Otherwise start blank. **Another account's profile is never shown.**
+   - Upload nothing, and try again on the next run.
 
 **When signed in and the profile or the preference switch changes:**
-- Mark the copy dirty and save the whole document with PUT after a short pause in typing (about 1 second debounce; the exact value is the builder's call).
-- On success, clear dirty. On failure, stay dirty and retry on the next change or the next load.
+- Mark the copy dirty, then save the whole document with PUT after about 1 second without changes. The exact debounce is the builder's call.
+- On success, clear dirty. On failure (including 401), stay dirty. Don't retry in a loop; retry on the next change or the next sync run.
 - Saving never blocks typing and shows no new UI.
 - Make a best-effort final save when the tab is hidden or closed (`visibilitychange` / `pagehide`).
+
+**Account-switch safety** (my call): every save is tagged with the account it was made for. Before a PUT is sent, and again before its response is applied:
+- If the signed-in account is no longer that account, the save is dropped and the response ignored.
+- An in-flight GET from a previous account's sync run is also ignored.
+
+The server decides the account from whatever cookie is current, so this is what stops a late save from landing in the wrong account.
 
 **`reset()`** (the store's existing reset) saves the blank profile for signed-in users like any other change.
 
@@ -143,13 +162,14 @@ The browser copy gains two pieces of bookkeeping in the `itjobcafe.swipe.v2` blo
   - PUT then GET round-trips;
   - the cookie and a Bearer token see the same profile;
   - unknown keys are dropped, oversized lists are capped, and `email` is ignored;
+  - a resume `dbId` that isn't the account's own is removed;
   - non-object, oversize and wrong content-type requests get 400; no auth or a bad Bearer gets 401;
   - account deletion removes the row.
 - **A browser walkthrough** before merging:
   1. **Existing user:** with a filled profile saved in the browser before the update, sign in and confirm the profile is unchanged and now stored on the server.
   2. **A second browser** signed in to the same account shows the same profile.
   3. **An edit in browser B** appears in browser A after a reload.
-  4. **Shared computer:** user A signs out, user B signs in on the same browser. B does not get A's profile, and A's server profile is untouched.
+  4. **Shared computer:** user A signs out, user B signs in on the same browser. B does not get A's profile, and A's server profile is untouched. Repeat with the server unreachable during B's sign-in: B starts blank.
   5. **A guest** sees no change.
   6. **A failed save** (stop the server mid-edit), then reload once it's back: the edit is kept.
 - `npx tsc --noEmit`, `npm run lint` and `npm run build` are clean.
