@@ -4,9 +4,10 @@
  * --------------------------------------------------------------------------
  * One T-SQL batch under SET XACT_ABORT ON: any error rolls the whole
  * transaction back inside SQL Server, even if this process dies mid-request.
- * Order matters: child rows before login_users (FKs), and AI scores before
- * the resumes they point at (career_ops_scores.ResumeUploadID). Resumes and
- * scores also match by email, catching older rows never linked to the user id.
+ * Order matters: child rows (including the saved profile) before login_users
+ * (FKs), and AI scores before the resumes they point at
+ * (career_ops_scores.ResumeUploadID). Resumes and scores also match by email,
+ * catching older rows never linked to the user id.
  */
 
 import "server-only";
@@ -28,6 +29,7 @@ export async function deleteAccount(
        BEGIN TRANSACTION;
          DELETE FROM ${DB}.mobile_sessions WHERE LoginUserID = @id;
          DELETE FROM ${DB}.user_job_seen WHERE LoginUserID = @id;
+         DELETE FROM ${DB}.user_profiles WHERE LoginUserID = @id;
          DELETE FROM ${DB}.career_ops_scores
           WHERE UserEmail = @email
              OR ResumeUploadID IN (
