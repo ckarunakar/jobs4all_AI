@@ -12,6 +12,7 @@
 
 # testing
 /coverage
+/scripts/store-sync-harness/out/
 
 # next.js
 /.next/

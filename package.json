@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "node --test \"lib/**/*.test.ts\""
+    "test": "node --test \"lib/**/*.test.ts\"",
+    "test:store": "node scripts/store-sync-harness/build.mjs && NODE_ENV=development node --import ./scripts/store-sync-harness/register.mjs scripts/store-sync-harness/harness.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.106.0",
