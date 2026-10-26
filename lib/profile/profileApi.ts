@@ -14,6 +14,13 @@ import {
 } from "@/lib/profile/profileSync";
 
 /**
+ * How long the profile GET may take. The first job fetch waits for it and
+ * edits made meanwhile can be replaced by the server copy, so a hung request
+ * is cut off and treated like any other failure (the browser copy is used).
+ */
+export const PROFILE_FETCH_TIMEOUT_MS = 8000;
+
+/**
  * The signed-in account's saved profile: found, none saved yet, or error.
  * `expectedAccount` is the account this tab is showing. An answer for any
  * other account (the cookie changed in another tab), or one that doesn't say
@@ -24,7 +31,9 @@ export async function fetchServerProfile(
   expectedAccount: string,
 ): Promise<ServerProfileResult> {
   try {
-    const res = await fetch("/api/profile");
+    const res = await fetch("/api/profile", {
+      signal: AbortSignal.timeout(PROFILE_FETCH_TIMEOUT_MS),
+    });
     if (res.status !== 200) return { kind: "error" };
     const data = (await res.json()) as {
       ok?: unknown;
