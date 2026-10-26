@@ -2,7 +2,8 @@
 
 /**
  * Swipe store — client-side state for the swipe app. Persists job statuses,
- * notes, and the profile to localStorage.
+ * notes, and the profile to localStorage. A signed-in user's profile is also
+ * kept in sync with their account (/api/profile; see lib/profile/profileSync).
  *
  * TODO(backend): swap localStorage for API calls; keep this action surface.
  */
@@ -34,6 +35,17 @@ import {
   prefFilterSummaryText,
   type PrefFilterParams,
 } from "@/lib/swipe/prefFilters";
+import {
+  createProfileSaver,
+  decideProfileSync,
+  normalizeOwner,
+  resolveOwner,
+  type ProfileSaver,
+} from "@/lib/profile/profileSync";
+import {
+  fetchServerProfile,
+  sendServerProfile,
+} from "@/lib/profile/profileApi";
 
 /** Active job filters — drive the SQL WHERE clauses via /api/jobs (server-side). */
 export interface JobFilterState {
@@ -191,6 +203,11 @@ interface Persisted {
   notes: Record<string, string>;
   profile: ResumeProfile;
   prefFilters?: boolean;
+  /** Normalized email of the account this profile copy belongs to; "" =
+   *  guest-era. Absent in older data (then read from `profile.email`). */
+  profileOwner?: string;
+  /** True while the copy has edits for `profileOwner` the server hasn't confirmed. */
+  profileDirty?: boolean;
 }
 
 export interface ScoreNextJobsResult {
@@ -336,6 +353,51 @@ export function SwipeStoreProvider({
   // Preference-baseline toggle — default ON; absent in storage means true.
   const [usePreferenceFilters, setUsePreferenceFiltersState] = useState(true);
 
+  // Server-side profile sync. `accountKey` is "" for guests (no sync at all).
+  const accountKey =
+    isLoggedIn && sessionEmail ? normalizeOwner(sessionEmail) : "";
+  // Who the browser copy belongs to, and whether it has unconfirmed edits.
+  const [profileOwner, setProfileOwner] = useState("");
+  const [profileDirty, setProfileDirty] = useState(false);
+  // The account whose sync decision has been applied (null = pending). Until
+  // it equals accountKey, the shown profile may be a placeholder the server
+  // copy is about to replace, so nothing is saved or written to storage.
+  const [syncedFor, setSyncedFor] = useState<string | null>(null);
+  // On an in-place account change the first render with the new props would
+  // still show the previous account's in-memory profile (effects haven't run
+  // yet). Swap it for a blank one during render, before anything commits.
+  const [renderedAccount, setRenderedAccount] = useState(accountKey);
+  if (renderedAccount !== accountKey) {
+    setRenderedAccount(accountKey);
+    if (accountKey && profileOwner !== "" && profileOwner !== accountKey) {
+      setProfile({ ...DEFAULT_SWIPE_PROFILE, email: sessionEmail ?? "" });
+    }
+  }
+  const accountRef = useRef("");
+  // Bumped on every signed-in edit; a save only clears dirty if no edit
+  // happened after it was queued.
+  const versionRef = useRef(0);
+  const saverRef = useRef<ProfileSaver | null>(null);
+
+  // One saver per account. Cancelling on change drops the old account's
+  // queued save, and the saver ignores its late responses (account check).
+  useEffect(() => {
+    accountRef.current = accountKey;
+    if (!accountKey) return;
+    const saver = createProfileSaver({
+      send: sendServerProfile,
+      currentAccount: () => accountRef.current,
+      onSaved: (job) => {
+        if (job.version === versionRef.current) setProfileDirty(false);
+      },
+    });
+    saverRef.current = saver;
+    return () => {
+      saver.cancel();
+      if (saverRef.current === saver) saverRef.current = null;
+    };
+  }, [accountKey]);
+
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     let cancelled = false;
@@ -345,6 +407,10 @@ export function SwipeStoreProvider({
     let storedNotes: Record<string, string> = {};
     let persistedProfile: Partial<ResumeProfile> | null = null;
     let prefFiltersOn = true;
+    // Owner is read before the session email is stamped onto the profile:
+    // in older data that stored email is the only record of the owner.
+    let storedOwner = "";
+    let storedDirty = false;
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) {
@@ -353,6 +419,8 @@ export function SwipeStoreProvider({
         storedNotes = parsed.notes ?? {};
         if (parsed.profile) persistedProfile = parsed.profile;
         if (parsed.prefFilters === false) prefFiltersOn = false;
+        storedOwner = resolveOwner(parsed.profileOwner, parsed.profile?.email);
+        storedDirty = parsed.profileDirty === true;
       }
     } catch {
       // ignore corrupt state
@@ -360,12 +428,69 @@ export function SwipeStoreProvider({
 
     // Seed the profile; the logged-in email (if any) is authoritative, so the
     // resume upload + scoring always use the account's email, not a typo.
+    const stamp = (p: ResumeProfile): ResumeProfile =>
+      sessionEmail ? { ...p, email: sessionEmail } : p;
     const base = persistedProfile
       ? { ...DEFAULT_SWIPE_PROFILE, ...persistedProfile }
       : DEFAULT_SWIPE_PROFILE;
-    const seededProfile = sessionEmail ? { ...base, email: sessionEmail } : base;
+    // Signed in, a copy owned by another account is never shown — not even
+    // while the server answer is pending — so it can't be edited into this
+    // account.
+    const showStored =
+      !accountKey || storedOwner === "" || storedOwner === accountKey;
+    const seededProfile = stamp(showStored ? base : DEFAULT_SWIPE_PROFILE);
+    const seededPrefFilters = showStored ? prefFiltersOn : true;
     setProfile(seededProfile);
-    setUsePreferenceFiltersState(prefFiltersOn);
+    setUsePreferenceFiltersState(seededPrefFilters);
+    setProfileOwner(storedOwner);
+    setProfileDirty(storedDirty);
+    setSyncedFor(null);
+
+    // Signed in: fetch the server copy and apply the sync decision, made from
+    // the storage snapshot above (not from edits made since). Returns the
+    // profile + switch the first job fetch should use, or null if cancelled.
+    async function syncProfile(): Promise<{
+      profile: ResumeProfile;
+      prefFilters: boolean;
+    } | null> {
+      const server = await fetchServerProfile();
+      if (cancelled) return null;
+      const decision = decideProfileSync(
+        {
+          profile: persistedProfile ? base : null,
+          owner: storedOwner,
+          dirty: storedDirty,
+        },
+        server,
+        accountKey,
+      );
+      let resolved = { profile: seededProfile, prefFilters: seededPrefFilters };
+      if (decision === "use-server" || decision === "start-blank") {
+        // Replaces what is shown, including edits made during the GET.
+        const next = stamp(
+          decision === "use-server" && server.kind === "found"
+            ? server.profile
+            : DEFAULT_SWIPE_PROFILE,
+        );
+        const prefFilters = server.kind === "error" ? true : server.prefFilters;
+        setProfile(next);
+        setUsePreferenceFiltersState(prefFilters);
+        setProfileOwner(accountKey);
+        setProfileDirty(false);
+        resolved = { profile: next, prefFilters };
+      } else {
+        // The local copy stands; keep any edits made during the GET.
+        setProfile((prev) => stamp(prev));
+        if (decision === "upload-local") {
+          // The save effect uploads it once the gate below opens.
+          versionRef.current += 1;
+          setProfileOwner(accountKey);
+          setProfileDirty(true);
+        }
+      }
+      setSyncedFor(accountKey);
+      return resolved;
+    }
 
     // One-time import of localStorage pipeline state into the account.
     // Existing server rows win; the flag is only set on success so a failed
@@ -402,21 +527,16 @@ export function SwipeStoreProvider({
         }
         localStorage.setItem(importKey, "1");
         // Absorb the guest-era payload into this account: clear the stored
-        // statuses/notes (profile + prefFilters toggle untouched) so this
-        // pipeline isn't re-imported by the next account to log in on this
-        // browser.
+        // statuses/notes (every other field — profile, toggle, owner/dirty —
+        // untouched) so this pipeline isn't re-imported by the next account
+        // to log in on this browser.
         try {
           const raw = localStorage.getItem(STORAGE_KEY);
           if (raw) {
             const parsed = JSON.parse(raw) as Persisted;
             localStorage.setItem(
               STORAGE_KEY,
-              JSON.stringify({
-                statuses: {},
-                notes: {},
-                profile: parsed.profile,
-                prefFilters: parsed.prefFilters,
-              }),
+              JSON.stringify({ ...parsed, statuses: {}, notes: {} }),
             );
           }
         } catch {
@@ -433,8 +553,17 @@ export function SwipeStoreProvider({
       // only gated by `filtering` (false pre-hydration) — a filter/toggle
       // applied mid-hydration must win, not be clobbered by this response.
       const reqId = ++filterReqRef.current;
-      const derived = derivePrefFilterParams(seededProfile);
-      const prefs = prefFiltersOn && hasPrefFilters(derived) ? derived : undefined;
+      // Profile sync comes first so the feed's preference filters use the
+      // resolved profile and switch, not the pre-sync placeholder.
+      let resolved = { profile: seededProfile, prefFilters: seededPrefFilters };
+      if (accountKey) {
+        const synced = await syncProfile();
+        if (!synced) return;
+        resolved = synced;
+      }
+      const derived = derivePrefFilterParams(resolved.profile);
+      const prefs =
+        resolved.prefFilters && hasPrefFilters(derived) ? derived : undefined;
       if (isLoggedIn) {
         await maybeImport();
         const [feed, tracked] = await Promise.all([
@@ -473,11 +602,17 @@ export function SwipeStoreProvider({
     return () => {
       cancelled = true;
     };
-  }, [sessionEmail, isLoggedIn, withKnownScores]);
+  }, [sessionEmail, isLoggedIn, accountKey, withKnownScores]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
   useEffect(() => {
     if (!hydrated) return;
+    // Signed in, nothing is written until this account's sync decision is
+    // applied: the profile shown before it is a placeholder, and storing it
+    // under the previous owner/dirty flags could later upload it as that
+    // owner's profile. (Matters on in-page account changes, where `hydrated`
+    // is already true.)
+    if (accountKey && syncedFor !== accountKey) return;
     try {
       if (isLoggedIn) {
         // Logged in: statuses/notes live server-side, not in localStorage —
@@ -505,6 +640,8 @@ export function SwipeStoreProvider({
             notes: prevNotes,
             profile,
             prefFilters: usePreferenceFilters,
+            profileOwner,
+            profileDirty,
           }),
         );
       } else {
@@ -516,13 +653,74 @@ export function SwipeStoreProvider({
             notes,
             profile,
             prefFilters: usePreferenceFilters,
+            profileOwner,
+            profileDirty,
           }),
         );
       }
     } catch {
       // storage unavailable — non-fatal
     }
-  }, [jobs, notes, profile, hydrated, isLoggedIn, usePreferenceFilters]);
+  }, [
+    jobs,
+    notes,
+    profile,
+    hydrated,
+    isLoggedIn,
+    usePreferenceFilters,
+    profileOwner,
+    profileDirty,
+    accountKey,
+    syncedFor,
+  ]);
+
+  // Save signed-in edits ~1 s after the last change (the saver debounces and
+  // keeps saves in order). Only once this account's sync decision is applied.
+  useEffect(() => {
+    if (!hydrated || !profileDirty || !sessionEmail) return;
+    if (!accountKey || syncedFor !== accountKey) return;
+    saverRef.current?.schedule({
+      account: accountKey,
+      version: versionRef.current,
+      body: {
+        profile,
+        prefFilters: usePreferenceFilters,
+        expectedEmail: sessionEmail,
+      },
+    });
+  }, [
+    profile,
+    usePreferenceFilters,
+    profileDirty,
+    hydrated,
+    syncedFor,
+    accountKey,
+    sessionEmail,
+  ]);
+
+  // Best-effort final save when the tab is hidden or closed.
+  useEffect(() => {
+    if (!profileDirty || !accountKey) return;
+    const flush = () => saverRef.current?.flush(true);
+    const onVisibility = () => {
+      if (document.visibilityState === "hidden") flush();
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("pagehide", flush);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("pagehide", flush);
+    };
+  }, [profileDirty, accountKey]);
+
+  // A signed-in edit makes the browser copy this account's, with changes the
+  // server hasn't confirmed. Guest edits stay browser-only and mark nothing.
+  const markProfileEdited = useCallback(() => {
+    if (!accountKey) return;
+    versionRef.current += 1;
+    setProfileOwner(accountKey);
+    setProfileDirty(true);
+  }, [accountKey]);
 
   // Sync one job's full state (status + notes + snapshot) for the logged-in
   // user (fire-and-forget; never blocks the swipe). MERGE-on-server means a
@@ -608,9 +806,11 @@ export function SwipeStoreProvider({
   );
 
   const updateProfile = useCallback(
-    (patch: Partial<ResumeProfile>) =>
-      setProfile((prev) => ({ ...prev, ...patch })),
-    [],
+    (patch: Partial<ResumeProfile>) => {
+      markProfileEdited();
+      setProfile((prev) => ({ ...prev, ...patch }));
+    },
+    [markProfileEdited],
   );
 
   const scoreNextJobs = useCallback(async (): Promise<ScoreNextJobsResult> => {
@@ -797,6 +997,7 @@ export function SwipeStoreProvider({
   // visible to activePrefs yet.
   const setUsePreferenceFilters = useCallback(
     (on: boolean) => {
+      markProfileEdited();
       setUsePreferenceFiltersState(on);
       // No pref tags on the profile means the refetch would be a guaranteed
       // no-op — skip the (slow) round trip entirely.
@@ -813,11 +1014,12 @@ export function SwipeStoreProvider({
           if (reqId === filterReqRef.current) setFiltering(false);
         });
     },
-    [jobFilters, activePrefs, replaceDeck, profile],
+    [jobFilters, activePrefs, replaceDeck, profile, markProfileEdited],
   );
 
   const reset = useCallback(() => {
     setNotesState({});
+    markProfileEdited();
     setProfile(DEFAULT_SWIPE_PROFILE);
     setJobFilters({});
     setFiltering(true);
@@ -855,7 +1057,7 @@ export function SwipeStoreProvider({
           if (reqId === filterReqRef.current) setFiltering(false);
         });
     }
-  }, [isLoggedIn, withKnownScores]);
+  }, [isLoggedIn, withKnownScores, markProfileEdited]);
 
   const queue = useMemo(
     () => jobs.filter((j) => j.status === "new"),
