@@ -13,6 +13,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -373,7 +374,13 @@ export function SwipeStoreProvider({
       setProfile({ ...DEFAULT_SWIPE_PROFILE, email: sessionEmail ?? "" });
     }
   }
+  // The live account. Set in a layout effect so it changes with the commit,
+  // before any async callback (a late save response, a resume upload's
+  // updateProfile) can run against the new account.
   const accountRef = useRef("");
+  useLayoutEffect(() => {
+    accountRef.current = accountKey;
+  }, [accountKey]);
   // Bumped on every signed-in edit; a save only clears dirty if no edit
   // happened after it was queued.
   const versionRef = useRef(0);
@@ -387,7 +394,6 @@ export function SwipeStoreProvider({
   // One saver per account. Cancelling on change drops the old account's
   // queued save, and the saver ignores its late responses (account check).
   useEffect(() => {
-    accountRef.current = accountKey;
     if (!accountKey) return;
     const saver = createProfileSaver({
       send: sendServerProfile,
@@ -626,12 +632,16 @@ export function SwipeStoreProvider({
   /* eslint-enable react-hooks/set-state-in-effect */
 
   useEffect(() => {
-    if (!hydrated) return;
-    // Signed in, nothing is written until this account's sync decision is
-    // applied: the profile shown before it is a placeholder, and storing it
-    // under the previous owner/dirty flags could later upload it as that
-    // owner's profile. (Matters on in-page account changes, where `hydrated`
-    // is already true.)
+    // Signed in, the blob is written as soon as this account's sync decision
+    // is applied, not after the (slow) first job fetch: saves no longer wait
+    // for it, so a stale stored owner/dirty would otherwise survive a
+    // confirmed save and be re-uploaded over it next load. This branch only
+    // refreshes the profile fields (stored statuses/notes are kept), so it
+    // needs nothing from hydration. Guests still wait for it, as before.
+    if (!accountKey && !hydrated) return;
+    // Before the decision, nothing is written: the profile shown is a
+    // placeholder, and storing it under the previous owner/dirty flags could
+    // later upload it as that owner's profile.
     if (accountKey && syncedFor !== accountKey) return;
     try {
       if (isLoggedIn) {
@@ -832,10 +842,13 @@ export function SwipeStoreProvider({
 
   const updateProfile = useCallback(
     (patch: Partial<ResumeProfile>) => {
+      // A callback from before an in-place account change (e.g. a resume
+      // upload finishing late) applies nothing to the new account's copy.
+      if (accountKey !== accountRef.current) return;
       markProfileEdited();
       setProfile((prev) => ({ ...prev, ...patch }));
     },
-    [markProfileEdited],
+    [markProfileEdited, accountKey],
   );
 
   const scoreNextJobs = useCallback(async (): Promise<ScoreNextJobsResult> => {
@@ -1022,6 +1035,7 @@ export function SwipeStoreProvider({
   // visible to activePrefs yet.
   const setUsePreferenceFilters = useCallback(
     (on: boolean) => {
+      if (accountKey !== accountRef.current) return; // stale (see updateProfile)
       markProfileEdited();
       setUsePreferenceFiltersState(on);
       // No pref tags on the profile means the refetch would be a guaranteed
@@ -1039,10 +1053,11 @@ export function SwipeStoreProvider({
           if (reqId === filterReqRef.current) setFiltering(false);
         });
     },
-    [jobFilters, activePrefs, replaceDeck, profile, markProfileEdited],
+    [jobFilters, activePrefs, replaceDeck, profile, markProfileEdited, accountKey],
   );
 
   const reset = useCallback(() => {
+    if (accountKey !== accountRef.current) return; // stale (see updateProfile)
     setNotesState({});
     if (accountKey) {
       markProfileEdited();
