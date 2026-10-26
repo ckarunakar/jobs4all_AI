@@ -206,7 +206,7 @@ interface Persisted {
   /** Normalized email of the account this profile copy belongs to; "" =
    *  guest-era. Absent in older data (then read from `profile.email`). */
   profileOwner?: string;
-  /** True while the copy has edits for `profileOwner` the server hasn't confirmed. */
+  /** True while the copy has signed-in edits the server hasn't confirmed. */
   profileDirty?: boolean;
 }
 
@@ -675,10 +675,12 @@ export function SwipeStoreProvider({
   ]);
 
   // Save signed-in edits ~1 s after the last change (the saver debounces and
-  // keeps saves in order). Only once this account's sync decision is applied.
+  // keeps saves in order). Only once this account's sync decision is applied,
+  // and only for a copy that sync made this account's: edits to a copy the
+  // server never confirmed (e.g. after a failed GET) must not overwrite it.
   useEffect(() => {
-    if (!hydrated || !profileDirty || !sessionEmail) return;
-    if (!accountKey || syncedFor !== accountKey) return;
+    if (!profileDirty || !sessionEmail || !accountKey) return;
+    if (syncedFor !== accountKey || profileOwner !== accountKey) return;
     saverRef.current?.schedule({
       account: accountKey,
       version: versionRef.current,
@@ -692,7 +694,7 @@ export function SwipeStoreProvider({
     profile,
     usePreferenceFilters,
     profileDirty,
-    hydrated,
+    profileOwner,
     syncedFor,
     accountKey,
     sessionEmail,
@@ -713,12 +715,11 @@ export function SwipeStoreProvider({
     };
   }, [profileDirty, accountKey]);
 
-  // A signed-in edit makes the browser copy this account's, with changes the
-  // server hasn't confirmed. Guest edits stay browser-only and mark nothing.
+  // A signed-in edit leaves changes the server hasn't confirmed. It does not
+  // change the owner: only sync does that. Guest edits mark nothing.
   const markProfileEdited = useCallback(() => {
     if (!accountKey) return;
     versionRef.current += 1;
-    setProfileOwner(accountKey);
     setProfileDirty(true);
   }, [accountKey]);
 
@@ -1019,7 +1020,14 @@ export function SwipeStoreProvider({
 
   const reset = useCallback(() => {
     setNotesState({});
-    markProfileEdited();
+    if (accountKey) {
+      markProfileEdited();
+    } else {
+      // A guest reset gives the copy up: no account's unsaved edits survive
+      // in it to be uploaded at that account's next sign-in.
+      setProfileOwner("");
+      setProfileDirty(false);
+    }
     setProfile(DEFAULT_SWIPE_PROFILE);
     setJobFilters({});
     setFiltering(true);
@@ -1057,7 +1065,7 @@ export function SwipeStoreProvider({
           if (reqId === filterReqRef.current) setFiltering(false);
         });
     }
-  }, [isLoggedIn, withKnownScores, markProfileEdited]);
+  }, [isLoggedIn, withKnownScores, markProfileEdited, accountKey]);
 
   const queue = useMemo(
     () => jobs.filter((j) => j.status === "new"),
