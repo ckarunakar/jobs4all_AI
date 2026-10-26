@@ -172,10 +172,11 @@ test("flush sends the waiting edit at once with keepalive", async () => {
   mock.timers.tick(1000);
   await settle();
   assert.equal(h.sends.length, 1);
+  assert.deepEqual(h.saved, [1]); // nothing else was in flight, so it is confirmed
 });
 
-test("flush during an in-flight save leaves the flushed edit unconfirmed", async () => {
-  const ds = [deferred(), deferred()];
+test("a flush during an in-flight save is re-sent once both settle, and that re-send is confirmed", async () => {
+  const ds = [deferred(), deferred(), deferred()];
   let n = 0;
   const h = harness({ send: () => ds[n++].promise });
   h.saver.schedule(job(1));
@@ -186,6 +187,62 @@ test("flush during an in-flight save leaves the flushed edit unconfirmed", async
   ds[0].resolve(true);
   ds[1].resolve(true);
   await settle();
+  assert.deepEqual(h.saved, [1]); // the overlapped flush itself is not confirmed
+  assert.deepEqual(h.sends, [["v1", false], ["v2", true], ["v2", false]]);
+  ds[2].resolve(true);
+  await settle();
+  assert.deepEqual(h.saved, [1, 2]);
+});
+
+test("an overlapped flush is not re-sent when a newer edit was scheduled", async () => {
+  const ds = [deferred(), deferred(), deferred()];
+  let n = 0;
+  const h = harness({ send: () => ds[n++].promise });
+  h.saver.schedule(job(1));
+  mock.timers.tick(1000);
+  h.saver.schedule(job(2));
+  h.saver.flush(true);
+  h.saver.schedule(job(3));
+  ds[0].resolve(true);
+  ds[1].resolve(true);
+  await settle();
+  mock.timers.tick(1000);
+  await settle();
+  assert.deepEqual(h.sends, [["v1", false], ["v2", true], ["v3", false]]);
+  ds[2].resolve(true);
+  await settle();
+  assert.deepEqual(h.saved, [1, 3]);
+});
+
+test("an overlapped flush is not re-sent after the account changed", async () => {
+  const ds = [deferred(), deferred()];
+  let n = 0;
+  const h = harness({ send: () => ds[n++].promise });
+  h.saver.schedule(job(1));
+  mock.timers.tick(1000);
+  h.saver.schedule(job(2));
+  h.saver.flush(true);
+  h.state.account = B;
+  ds[0].resolve(true);
+  ds[1].resolve(true);
+  await settle();
+  assert.equal(h.sends.length, 2);
+  assert.deepEqual(h.saved, []);
+});
+
+test("an overlapped flush is not re-sent after cancel", async () => {
+  const ds = [deferred(), deferred()];
+  let n = 0;
+  const h = harness({ send: () => ds[n++].promise });
+  h.saver.schedule(job(1));
+  mock.timers.tick(1000);
+  h.saver.schedule(job(2));
+  h.saver.flush(true);
+  h.saver.cancel();
+  ds[0].resolve(true);
+  ds[1].resolve(true);
+  await settle();
+  assert.equal(h.sends.length, 2);
   assert.deepEqual(h.saved, [1]);
 });
 

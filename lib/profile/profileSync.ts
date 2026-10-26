@@ -93,10 +93,19 @@ export interface ProfileSaver {
 
 /**
  * Debounced, ordered save queue: newer edits replace unsent ones, and at most one
- * send is in flight (except flush). A flush that goes out while another send is
- * still in flight is not confirmed through onSaved, because the two requests can
- * land in either order and the browser copy must stay dirty so it is re-uploaded.
- * Failed sends are not retried here; the store retries on the next edit or sync.
+ * send is in flight, except for a flush.
+ *
+ * A flush (tab hidden or closed) sends the waiting edit at once with keepalive,
+ * even while another send is in flight. That overlapped send is never confirmed
+ * through onSaved, because the two requests can land in either order. Once it
+ * settles, if the account is unchanged and nothing newer was scheduled (and the
+ * saver wasn't cancelled), the same edit is queued again as due: it is re-sent
+ * without keepalive as soon as nothing else is in flight, and that re-send is
+ * confirmed normally. On a real unload the page is gone before then, so the
+ * browser copy stays dirty and the next load uploads it.
+ *
+ * Failed sends are not retried here (apart from that one re-send); the store
+ * retries on the next edit or sync.
  */
 export function createProfileSaver(opts: {
   send: (body: ProfileSaveBody, keepalive: boolean) => Promise<boolean>;
@@ -107,8 +116,9 @@ export function createProfileSaver(opts: {
   const delay = opts.delayMs ?? PROFILE_SAVE_DELAY_MS;
   let waiting: ProfileSaveJob | null = null;
   let timer: ReturnType<typeof setTimeout> | null = null;
-  let due = false; // timer fired while a send was in flight
+  let due = false; // send the waiting job as soon as nothing is in flight
   let inFlight = 0;
+  let generation = 0; // bumped by schedule() and cancel()
 
   function clearTimer() {
     if (timer !== null) clearTimeout(timer);
@@ -122,6 +132,7 @@ export function createProfileSaver(opts: {
     if (!job) return;
     if (job.account !== opts.currentAccount()) return;
     const overlapped = inFlight > 0;
+    const sentAt = generation;
     inFlight++;
     let p: Promise<boolean>;
     try {
@@ -134,13 +145,23 @@ export function createProfileSaver(opts: {
       () => false,
     ).then((ok) => {
       inFlight--;
-      if (ok && !overlapped && job.account === opts.currentAccount()) opts.onSaved(job);
-      if (inFlight === 0 && due && waiting) sendWaiting(false);
+      try {
+        if (ok && !overlapped && job.account === opts.currentAccount()) opts.onSaved(job);
+      } finally {
+        // An overlapped flush can't be confirmed: send the same edit again,
+        // unless something newer replaced it or the account changed.
+        if (overlapped && sentAt === generation && job.account === opts.currentAccount()) {
+          waiting = job;
+          due = true;
+        }
+        if (inFlight === 0 && due && waiting) sendWaiting(false);
+      }
     });
   }
 
   return {
     schedule(job) {
+      generation++;
       waiting = job;
       due = false;
       clearTimer();
@@ -155,6 +176,7 @@ export function createProfileSaver(opts: {
       sendWaiting(keepalive);
     },
     cancel() {
+      generation++;
       clearTimer();
       waiting = null;
       due = false;
