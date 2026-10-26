@@ -134,6 +134,42 @@ returns the pipeline (TOP 500, newest first, live join with snapshot
 fallback); `POST /api/jobs/seen/import` is the one-time localStorage import
 on login. Guests stay localStorage-only.
 
+## Profiles (write)
+
+Signed-in users' profiles live in `ITJC_SCRAPPER.dbo.user_profiles`, one row per
+account (`LoginUserID` is the primary key). Run
+[`database/setup/create-user-profiles.sql`](database/setup/create-user-profiles.sql)
+once in DBeaver before deploying the code that uses it. The row holds the
+sanitized profile as JSON (`ProfileJson`), the "use my profile to filter jobs"
+switch (`PrefFilters`, on by default), and `CreatedAt` / `UpdatedAt`. Its foreign
+key points at `login_users` with no cascade; account deletion removes the row
+explicitly.
+
+- `GET /api/profile` returns the caller's profile (`null` until one is saved),
+  `prefFilters` and `updatedAt`.
+- `PUT /api/profile` takes `{ profile, prefFilters?, expectedEmail? }`. Both
+  methods work with the website cookie or the app's Bearer token. The `email`
+  in the response always comes from the account, never from the body.
+- If `expectedEmail` is sent and doesn't match the signed-in account
+  (case-insensitive), the save returns **409** `"Signed in as a different account."`
+  Nothing is written. The website sends it so a tab showing account A can't
+  save into account B after a sign-in in another tab.
+- Save is one `MERGE` into `user_profiles`, keyed on `LoginUserID` with
+  `HOLDLOCK`, so two first saves at the same time can't collide. An omitted
+  `prefFilters` keeps the stored value.
+- Limits are enforced in [`lib/profile/sanitizeProfile.ts`](lib/profile/sanitizeProfile.ts):
+  the request body is capped at 64 KB (`400 "Profile too large."`); unknown
+  fields are dropped; strings are trimmed and cut at 500 characters; lists keep
+  the first 50 items, each cut at 200 characters; at most 20 resumes are kept.
+  A body that isn't a JSON object, or has no object `profile`, gets
+  `400 "Invalid profile."`. A non-JSON content type gets `400 "Invalid JSON body."`.
+- Resume references whose `dbId` doesn't belong to the caller (matched by user
+  id or email, as in account deletion) are stripped before the save.
+- Reads run the stored JSON through the same validator, so a damaged row reads
+  as "no profile" instead of breaking the page.
+- Unauthenticated calls get `401 "Not authenticated"`; database failures get
+  `500 "Could not load profile."` (GET) or `500 "Could not save profile."` (PUT).
+
 ## Mobile sessions and account deletion (write)
 
 The native app signs in with `POST /api/mobile/login` and gets an opaque
@@ -141,7 +177,7 @@ Bearer token; the server stores only its SHA-256 hash in `mobile_sessions`
 (run `database/setup/create-mobile-sessions.sql` once, before deploying).
 Sessions slide to 90 days from last use; `POST /api/mobile/logout` deletes
 the row. `POST /api/account/delete` (cookie or Bearer; confirmed by password, or by typed email for accounts without a password)
-deletes the user's rows from `mobile_sessions`, `user_job_seen`,
+deletes the user's rows from `mobile_sessions`, `user_job_seen`, `user_profiles`,
 `career_ops_scores`, `resume_upload` and `login_users` in one transaction.
 
 ## Career-Ops AI scoring (manual, top 10)
@@ -181,8 +217,8 @@ at 10; DB-cached so re-clicks don't re-call the model).
   `resume_upload`), the AI score cache (`MERGE` into `career_ops_scores`), the
   per-user pipeline state (`MERGE` into `user_job_seen` — status, notes, and a
   title/company/location/url snapshot per swiped job), mobile app sessions
-  (`mobile_sessions`), and account deletion (`DELETE` of one user's rows across
-  those five tables). All are parameterized. No truncate, and the stored
+  (`mobile_sessions`), user profiles (`MERGE` into `user_profiles`), and account
+  deletion (`DELETE` of one user's rows across those six tables). All are parameterized. No truncate, and the stored
   procedure that processes jobs is **never** called.
 - `lib/db/*` import `server-only`, so DB code can never be bundled into client JS. The DB routes
   are dynamic server routes (`ƒ`), and credentials are never logged (only server/db/host).

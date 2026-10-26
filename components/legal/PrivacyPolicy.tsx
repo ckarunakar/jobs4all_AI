@@ -3,8 +3,7 @@
  * collects and shares (spec 2026-10-16). Not legal advice. ITJobCafe must
  * approve it before the mobile apps launch: replace the bracketed constants
  * below and set POLICY_IS_DRAFT to false (that removes the draft banner).
- * When the profile moves server-side (mobile program, project 2), rewrite the
- * "Stored only on your device" paragraph.
+ * Profile storage updated for spec 2026-10-20 (server-side profile).
  */
 
 import { LEGAL_H2, LEGAL_P, LEGAL_UL } from "@/components/legal/LegalPage";
@@ -66,6 +65,14 @@ export function PrivacyPolicy() {
           with it, if any.
         </li>
         <li>
+          <strong>Your profile:</strong> what you enter on the Profile page —
+          your name, phone number, LinkedIn, GitHub and portfolio links, school,
+          major, graduation date, work authorization, and your job preferences
+          (locations, roles, remote or on-site, target roles, technologies and
+          job types) — along with the names of your uploaded resumes and whether
+          to filter jobs by your preferences.
+        </li>
+        <li>
           <strong>Your job activity:</strong> the jobs you save, skip, apply to
           or otherwise track, your notes on them, and basic details of each job
           (title, company, location and link) as they were when you saved it.
@@ -80,11 +87,10 @@ export function PrivacyPolicy() {
         </li>
       </ul>
       <p className={LEGAL_P}>
-        <strong>Stored only on your device:</strong> your profile and job
-        preferences (such as preferred locations, roles and technologies) are
-        kept in your browser&apos;s or app&apos;s local storage, not in our
-        database. They are sent to our server and to the AI provider when you
-        ask for a job to be scored, and are used only to produce that score.
+        <strong>Your profile is stored with your account,</strong> so it is the
+        same on the website and in the app. Your browser or the app also keeps a
+        copy on your device. It is sent to the AI provider only when you ask for
+        a job to be scored, and is used only to produce that score.
       </p>
 
       <h2 className={LEGAL_H2}>How we use it</h2>
@@ -106,7 +112,7 @@ export function PrivacyPolicy() {
           job is scored, we send one of these providers your resume text
           (including any contact details written in your resume), the job
           description, and these profile details: your name, school, major,
-          graduation date, work authorization, skills, and target roles and
+          graduation date, work authorization, skills, job types, and target roles and
           locations. The provider returns the score and processes the data
           under its own terms.
         </li>
@@ -128,14 +134,14 @@ export function PrivacyPolicy() {
         We keep your information until you delete your account. You can delete
         it at any time from <strong>Settings → Delete account</strong>, on the
         website or in the app. Deleting your account immediately and
-        permanently removes your account, your job activity and notes, your
+        permanently removes your account, your profile, your job activity and notes, your
         uploaded resumes, your AI fit scores and your app sign-ins. Copies in
         our database backups are removed within {BACKUP_RETENTION}.
       </p>
       <p className={LEGAL_P}>
-        Deleting your account on the website also clears the profile stored in
-        that browser. To clear it on another browser or device, clear that
-        site&apos;s data or uninstall the app.
+        Deleting your account on the website also clears the copy of your
+        profile stored in that browser. To clear a copy on another browser or
+        device, clear that site&apos;s data or uninstall the app.
       </p>
 
       <h2 className={LEGAL_H2}>Security</h2>

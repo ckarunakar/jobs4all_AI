@@ -18,6 +18,7 @@ submitted automatically.
   from the app) permanently removes the account and all of its data after the
   user confirms with their password (or, for accounts without a password, by
   typing their email address).
+- **Profile sync** — signed-in users' profiles live with the account (`GET`/`PUT /api/profile`, cookie or Bearer), so the website and the app share one profile; existing browser profiles are copied up on first sign-in.
 - **Swipe feed** — jobs read server-side from SQL Server with filters (type,
   city, recency, skill keywords, plus an always-on preference baseline from the profile); per-user seen-history so reviewed jobs don't resurface.
 - **Resume upload** — .pdf/.docx stored in SQL Server; text extracted
@@ -62,11 +63,11 @@ deploy time (renames in place, no data loss). The scraper-owned
 
 ## Known limitations
 
-- **The profile is per-browser.** Job statuses and notes now persist
-  server-side for logged-in users (`user_job_seen`) and follow you across
-  devices; a one-time import preserves any pre-login localStorage state.
-  Guests still swipe against `localStorage` only, and the editable profile
-  (name, links, school, preferences) remains per-browser for everyone.
+- **Guest profiles stay in the browser.** Guests' profiles (name, links,
+  school, preferences) live in `localStorage` only. Signed-in users' profiles
+  sync through `user_profiles`, and job statuses and notes persist server-side
+  for logged-in users (`user_job_seen`) and follow you across devices; a
+  one-time import preserves any pre-login localStorage state.
 - The AI score cache also has a local file layer (`data/job-scores.json`,
   gitignored) used by the scoring engine's file-cache seam; the real flow
   caches in the DB.
