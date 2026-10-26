@@ -1,6 +1,7 @@
 /**
  * GET /api/profile — the caller's saved profile (null until one is saved),
- * plus the "use my profile to filter jobs" switch and the last-saved time.
+ * plus the "use my profile to filter jobs" switch, the last-saved time and
+ * the signed-in account's email.
  * PUT /api/profile — save the caller's profile. Both work with the website
  * cookie or the app's Bearer token.
  *
@@ -29,10 +30,15 @@ import {
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-/** The 200 body shared by GET and PUT. */
+/**
+ * The 200 body shared by GET and PUT. `email` names the signed-in account, so
+ * a website tab can tell when the answer is for a different account than the
+ * one it is showing (the cookie changed in another tab).
+ */
 function profileResponse(user: RequestUser, row: ProfileRow | null) {
   return noStoreJson({
     ok: true,
+    email: user.email,
     profile: row ? { ...row.profile, email: user.email } : null,
     prefFilters: row?.prefFilters ?? true,
     updatedAt: row ? row.updatedAt.toISOString() : null,

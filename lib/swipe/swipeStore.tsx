@@ -468,7 +468,9 @@ export function SwipeStoreProvider({
       profile: ResumeProfile;
       prefFilters: boolean;
     } | null> {
-      const server = await fetchServerProfile();
+      // An answer for another account (the cookie changed in another tab)
+      // comes back as an error: this tab's own copy, or a blank one.
+      const server = await fetchServerProfile(accountKey);
       if (cancelled) return null;
       const decision = decideProfileSync(
         {

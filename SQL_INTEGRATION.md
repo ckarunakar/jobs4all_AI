@@ -145,11 +145,15 @@ switch (`PrefFilters`, on by default), and `CreatedAt` / `UpdatedAt`. Its foreig
 key points at `login_users` with no cascade; account deletion removes the row
 explicitly.
 
-- `GET /api/profile` returns the caller's profile (`null` until one is saved),
-  `prefFilters` and `updatedAt`.
-- `PUT /api/profile` takes `{ profile, prefFilters?, expectedEmail? }`. Both
-  methods work with the website cookie or the app's Bearer token. The `email`
-  in the response always comes from the account, never from the body.
+- `GET /api/profile` returns the signed-in account's `email`, its profile
+  (`null` until one is saved), `prefFilters` and `updatedAt`.
+- `PUT /api/profile` takes `{ profile, prefFilters?, expectedEmail? }` and
+  answers with the same body as GET. Both methods work with the website cookie
+  or the app's Bearer token. The top-level `email` and `profile.email` always
+  come from the account, never from the body.
+- The website ignores a GET answer whose `email` isn't the account the tab is
+  showing (the cookie changed in another tab). It keeps that account's own
+  browser copy instead, or starts blank if the copy belongs to someone else.
 - If `expectedEmail` is sent and doesn't match the signed-in account
   (case-insensitive), the save returns **409** `"Signed in as a different account."`
   Nothing is written. The website sends it so a tab showing account A can't

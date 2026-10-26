@@ -115,6 +115,7 @@ expect 401 "$s" "PUT /api/profile without auth"
 echo "== 3. empty profile"
 s=$(call GET /api/profile -b "$JAR")
 expect 200 "$s" "GET /api/profile (cookie)"
+check_arg "email is the signed-in account" '.email == $v' email "$EMAIL"
 check "profile is null" '.profile == null'
 check "prefFilters defaults to true" '.prefFilters == true'
 check "updatedAt is null" '.updatedAt == null'
@@ -190,6 +191,7 @@ jq -nc --argjson own "$OWN_ID" --arg e "$UPPER_EMAIL" '{
 }' > "$WORK/put.json"
 s=$(call PUT /api/profile -b "$JAR" "${JSON[@]}" --data-binary "@$WORK/put.json")
 expect 200 "$s" "PUT a full profile (cookie, upper-cased expectedEmail)"
+check_arg "top-level email is the signed-in account" '.email == $v' email "$EMAIL"
 check_arg "email is the account email, not the submitted one" '.profile.email == $v' email "$EMAIL"
 check "isAdmin is dropped" '.profile | has("isAdmin") | not'
 check "fullName is cut to 500 characters" '.profile.fullName | length == 500'

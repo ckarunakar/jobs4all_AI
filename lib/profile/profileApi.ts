@@ -7,22 +7,38 @@
 
 import { DEFAULT_SWIPE_PROFILE } from "@/lib/swipe/defaultProfile";
 import type { ResumeProfile } from "@/lib/careerOps/types";
-import type {
-  ProfileSaveBody,
-  ServerProfileResult,
+import {
+  normalizeOwner,
+  type ProfileSaveBody,
+  type ServerProfileResult,
 } from "@/lib/profile/profileSync";
 
-/** The signed-in account's saved profile: found, none saved yet, or error. */
-export async function fetchServerProfile(): Promise<ServerProfileResult> {
+/**
+ * The signed-in account's saved profile: found, none saved yet, or error.
+ * `expectedAccount` is the account this tab is showing. An answer for any
+ * other account (the cookie changed in another tab), or one that doesn't say
+ * whose it is, counts as an error, so it is never shown or stored as this
+ * account's profile.
+ */
+export async function fetchServerProfile(
+  expectedAccount: string,
+): Promise<ServerProfileResult> {
   try {
     const res = await fetch("/api/profile");
     if (res.status !== 200) return { kind: "error" };
     const data = (await res.json()) as {
       ok?: unknown;
+      email?: unknown;
       profile?: unknown;
       prefFilters?: unknown;
     };
     if (data?.ok !== true) return { kind: "error" };
+    if (
+      typeof data.email !== "string" ||
+      normalizeOwner(data.email) !== normalizeOwner(expectedAccount)
+    ) {
+      return { kind: "error" };
+    }
     const prefFilters =
       typeof data.prefFilters === "boolean" ? data.prefFilters : true;
     if (data.profile === null) return { kind: "none", prefFilters };
