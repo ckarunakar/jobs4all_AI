@@ -378,6 +378,11 @@ export function SwipeStoreProvider({
   // happened after it was queued.
   const versionRef = useRef(0);
   const saverRef = useRef<ProfileSaver | null>(null);
+  // The account this page's sync confirmed the browser copy belongs to (null
+  // = not confirmed: before the decision, or after a failed GET on an unowned
+  // copy). Only confirmed edits are saved; unconfirmed ones just claim the
+  // copy. In memory only, reset on every hydration run.
+  const confirmedForRef = useRef<string | null>(null);
 
   // One saver per account. Cancelling on change drops the old account's
   // queued save, and the saver ignores its late responses (account check).
@@ -445,6 +450,10 @@ export function SwipeStoreProvider({
     setProfileOwner(storedOwner);
     setProfileDirty(storedDirty);
     setSyncedFor(null);
+    confirmedForRef.current = null;
+    // Edits bump the version: if it moved by the time the decision applies,
+    // the person edited while the GET was pending.
+    const versionAtStart = versionRef.current;
 
     // Signed in: fetch the server copy and apply the sync decision, made from
     // the storage snapshot above (not from edits made since). Returns the
@@ -464,6 +473,9 @@ export function SwipeStoreProvider({
         server,
         accountKey,
       );
+      const editedDuringGet = versionRef.current !== versionAtStart;
+      const confirmed = decision !== "use-local" || storedOwner === accountKey;
+      confirmedForRef.current = confirmed ? accountKey : null;
       let resolved = { profile: seededProfile, prefFilters: seededPrefFilters };
       if (decision === "use-server" || decision === "start-blank") {
         // Replaces what is shown, including edits made during the GET.
@@ -486,6 +498,14 @@ export function SwipeStoreProvider({
           versionRef.current += 1;
           setProfileOwner(accountKey);
           setProfileDirty(true);
+        } else if (confirmed) {
+          // This account's own copy: edits made during the GET only claimed
+          // it, so mark them now to be saved like any other edit.
+          if (editedDuringGet) setProfileDirty(true);
+        } else {
+          // An unowned copy the server hasn't confirmed: nothing in it may be
+          // saved from this page (edits only claim it for this account).
+          setProfileDirty(false);
         }
       }
       setSyncedFor(accountKey);
@@ -715,12 +735,16 @@ export function SwipeStoreProvider({
     };
   }, [profileDirty, accountKey]);
 
-  // A signed-in edit leaves changes the server hasn't confirmed. It does not
-  // change the owner: only sync does that. Guest edits mark nothing.
+  // A signed-in edit. Once this page's sync confirmed the copy is this
+  // account's, it is marked for saving. Otherwise (before the decision, or
+  // after a failed GET on an unowned copy) it only claims the copy for this
+  // account: never shown to or uploaded by another account, and not saved
+  // over a server profile this page hasn't seen. Guest edits mark nothing.
   const markProfileEdited = useCallback(() => {
     if (!accountKey) return;
     versionRef.current += 1;
-    setProfileDirty(true);
+    if (confirmedForRef.current === accountKey) setProfileDirty(true);
+    else setProfileOwner(accountKey);
   }, [accountKey]);
 
   // Sync one job's full state (status + notes + snapshot) for the logged-in
