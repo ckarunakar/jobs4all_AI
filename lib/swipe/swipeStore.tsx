@@ -204,11 +204,27 @@ interface Persisted {
   notes: Record<string, string>;
   profile: ResumeProfile;
   prefFilters?: boolean;
-  /** Normalized email of the account this profile copy belongs to; "" =
-   *  guest-era. Absent in older data (then read from `profile.email`). */
+  /** Normalized email of the account this copy belongs to: set by sync, or
+   *  claimed by a signed-in edit when sync could not confirm ownership (a
+   *  failed GET on an unowned copy). "" = guest-era, nobody's yet. Absent in
+   *  older data (then read from `profile.email`). Another account's copy is
+   *  never shown to or uploaded by the signed-in account. */
   profileOwner?: string;
-  /** True while the copy has signed-in edits the server hasn't confirmed. */
+  /** True while the copy has signed-in edits the server hasn't confirmed.
+   *  Only edits to a copy this page's sync confirmed set it, so a claimed
+   *  copy is never dirty and the page that claimed it never uploads it; the
+   *  owner's next sync decides (the server copy if there is one, else the
+   *  claimed edits are uploaded). */
   profileDirty?: boolean;
+}
+
+/** `p` with the signed-in email stamped on (unchanged for guests): the
+ *  account's email is authoritative for resume uploads and scoring. */
+function withSessionEmail(
+  p: ResumeProfile,
+  sessionEmail: string | undefined,
+): ResumeProfile {
+  return sessionEmail ? { ...p, email: sessionEmail } : p;
 }
 
 export interface ScoreNextJobsResult {
@@ -371,7 +387,7 @@ export function SwipeStoreProvider({
   if (renderedAccount !== accountKey) {
     setRenderedAccount(accountKey);
     if (accountKey && profileOwner !== "" && profileOwner !== accountKey) {
-      setProfile({ ...DEFAULT_SWIPE_PROFILE, email: sessionEmail ?? "" });
+      setProfile(withSessionEmail(DEFAULT_SWIPE_PROFILE, sessionEmail));
     }
   }
   // The live account. Set in a layout effect so it changes with the commit,
@@ -440,7 +456,7 @@ export function SwipeStoreProvider({
     // Seed the profile; the logged-in email (if any) is authoritative, so the
     // resume upload + scoring always use the account's email, not a typo.
     const stamp = (p: ResumeProfile): ResumeProfile =>
-      sessionEmail ? { ...p, email: sessionEmail } : p;
+      withSessionEmail(p, sessionEmail);
     const base = persistedProfile
       ? { ...DEFAULT_SWIPE_PROFILE, ...persistedProfile }
       : DEFAULT_SWIPE_PROFILE;
@@ -708,11 +724,14 @@ export function SwipeStoreProvider({
 
   // Save signed-in edits ~1 s after the last change (the saver debounces and
   // keeps saves in order). Only once this account's sync decision is applied,
-  // and only for a copy that sync made this account's: edits to a copy the
-  // server never confirmed (e.g. after a failed GET) must not overwrite it.
+  // only for a copy owned by this account, and only when this page's sync
+  // confirmed that ownership: edits to a copy the server never confirmed (e.g.
+  // a claimed copy after a failed GET) must not overwrite the server profile.
+  // Unconfirmed edits never set dirty either; the check keeps the rule here.
   useEffect(() => {
     if (!profileDirty || !sessionEmail || !accountKey) return;
     if (syncedFor !== accountKey || profileOwner !== accountKey) return;
+    if (confirmedForRef.current !== accountKey) return;
     saverRef.current?.schedule({
       account: accountKey,
       version: versionRef.current,
