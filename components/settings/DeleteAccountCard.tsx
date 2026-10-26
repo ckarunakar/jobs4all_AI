@@ -129,6 +129,7 @@ export function DeleteAccountCard({
             <p className="text-sm font-medium">This deletes:</p>
             <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-muted">
               <li>Your account ({email})</li>
+              <li>Your profile</li>
               <li>Your saved, applied and skipped jobs, and your notes</li>
               <li>Your uploaded resumes</li>
               <li>Your AI fit scores</li>

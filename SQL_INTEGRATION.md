@@ -163,7 +163,8 @@ explicitly.
   `prefFilters` keeps the stored value.
 - Limits are enforced in [`lib/profile/sanitizeProfile.ts`](lib/profile/sanitizeProfile.ts):
   the request body is capped at 64 KB (`400 "Profile too large."`); unknown
-  fields are dropped; strings are trimmed and cut at 500 characters; lists keep
+  fields are dropped; text fields are trimmed and cut at 500 characters (resume
+  ids at 200 and `uploadedAt` at 50); lists keep
   the first 50 items, each cut at 200 characters; at most 20 resumes are kept.
   A body that isn't a JSON object, or has no object `profile`, gets
   `400 "Invalid profile."`. A non-JSON content type gets `400 "Invalid JSON body."`.
