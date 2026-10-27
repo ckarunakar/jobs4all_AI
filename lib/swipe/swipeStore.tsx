@@ -206,9 +206,11 @@ interface Persisted {
   prefFilters?: boolean;
   /** Normalized email of the account this copy belongs to: set by sync, or
    *  claimed by a signed-in edit when sync could not confirm ownership (a
-   *  failed GET unless the copy was already this account's). "" = guest-era, nobody's yet. Absent in
-   *  older data (then read from `profile.email`). Another account's copy is
-   *  never shown to or uploaded by the signed-in account. */
+   *  failed GET unless the copy was already this account's). "" = guest-era,
+   *  nobody's yet; also a blank placeholder shown after a failed GET, until
+   *  an edit claims it or a successful sync decides. Absent in older data
+   *  (then read from `profile.email`). Another account's copy is never shown
+   *  to or uploaded by the signed-in account. */
   profileOwner?: string;
   /** True while the copy has signed-in edits the server hasn't confirmed.
    *  Only edits to a copy this page's sync confirmed set it, so a claimed
@@ -403,8 +405,9 @@ export function SwipeStoreProvider({
   const saverRef = useRef<ProfileSaver | null>(null);
   // The account this page's sync confirmed the browser copy belongs to (null
   // = not confirmed: before the decision, or after a failed GET unless the
-  // copy was already this account's). Only confirmed edits are saved; unconfirmed ones just claim the
-  // copy. In memory only, reset on every hydration run.
+  // copy was already this account's). Only confirmed edits are saved;
+  // unconfirmed ones just claim the copy. In memory only, reset on every
+  // hydration run.
   const confirmedForRef = useRef<string | null>(null);
 
   // One saver per account. Cancelling on change drops the old account's
@@ -499,8 +502,9 @@ export function SwipeStoreProvider({
       );
       const editedDuringGet = versionRef.current !== versionAtStart;
       // After a failed GET the copy counts as confirmed only when it was
-      // already this account's; a blank placeholder shown for another
-      // account's copy is only ever claimed by edits, never saved.
+      // already this account's. A blank placeholder shown after a failed GET
+      // stays unowned ("") and is claimed by an edit; the next successful
+      // sync decides what happens to it.
       const confirmed = server.kind !== "error" || storedOwner === accountKey;
       confirmedForRef.current = confirmed ? accountKey : null;
       let resolved = { profile: seededProfile, prefFilters: seededPrefFilters };
@@ -514,7 +518,13 @@ export function SwipeStoreProvider({
         const prefFilters = server.kind === "error" ? true : server.prefFilters;
         setProfile(next);
         setUsePreferenceFiltersState(prefFilters);
-        setProfileOwner(accountKey);
+        // A placeholder from a failed GET stays unowned, so a later failed
+        // GET can't treat it as this account's confirmed copy.
+        setProfileOwner(
+          decision === "start-blank" && server.kind === "error"
+            ? ""
+            : accountKey,
+        );
         setProfileDirty(false);
         resolved = { profile: next, prefFilters };
       } else {
@@ -771,9 +781,9 @@ export function SwipeStoreProvider({
   }, [profileDirty, accountKey]);
 
   // A signed-in edit. Once this page's sync confirmed the copy is this
-  // account's, it is marked for saving. Otherwise (before the decision, or
-  // after a failed GET on an unowned copy) it only claims the copy for this
-  // account: never shown to or uploaded by another account, and not saved
+  // account's, it is marked for saving. Otherwise (any unconfirmed copy:
+  // before the decision, or after a failed GET, including a placeholder shown
+  // after one) it only claims the copy for this account: never shown to or uploaded by another account, and not saved
   // over a server profile this page hasn't seen. Guest edits mark nothing.
   const markProfileEdited = useCallback(() => {
     if (!accountKey) return;

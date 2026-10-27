@@ -341,7 +341,7 @@ await scenario(5, "GET fails, blob owned by another account → blank, no save, 
   check("Olivia never rendered", renders.every((r) => r.fullName !== "Olivia"), names(renders));
   check("blank shown, switch true", api.profile.fullName === "" && api.usePreferenceFilters === true);
   check("no PUT", puts().length === 0, puts());
-  check("blob after decision: A's blank, clean", getBlob().profileOwner === A && getBlob().profile.fullName === "" && getBlob().profileDirty === false, getBlob());
+  check("blob after decision: unowned blank placeholder, clean", getBlob().profileOwner === "" && getBlob().profile.fullName === "" && getBlob().profileDirty === false, getBlob());
 });
 
 await scenario("5b", "S5 as an in-page change (guest → A while hydrated is already true)", async () => {
@@ -363,7 +363,7 @@ await scenario("5b", "S5 as an in-page change (guest → A while hydrated is alr
   note(`renders as A: ${names(asA)}`);
   check("Olivia never rendered as A, not even the first commit", asA.length > 0 && asA.every((r) => r.fullName !== "Olivia"), names(asA));
   check("no PUT", puts().length === 0, puts());
-  check("blob: A's blank, clean", getBlob().profileOwner === A && getBlob().profile.fullName === "" && getBlob().profileDirty === false, getBlob());
+  check("blob: unowned blank placeholder, clean", getBlob().profileOwner === "" && getBlob().profile.fullName === "" && getBlob().profileDirty === false, getBlob());
 });
 
 await scenario(6, "fast typing → one PUT ~1 s after last key; key during in-flight PUT sent after it settles", async () => {
@@ -967,6 +967,33 @@ await scenario("Y3", "a 200 profile answer without a top-level email is an error
   await sleep(200);
   check("GET was made", gets().length >= 1);
   check("the unverified server profile is not shown", renders.every((r) => r.fullName !== "Server Alice") && api.profile.fullName === "Local Alice", names(renders));
+});
+
+await scenario("Z1", "R15: a blank placeholder from a failed GET stays unowned, so a later failed GET plus an edit never saves over the server profile", async () => {
+  freshScenario({ cookieEmail: A, getMode: "500", profiles: { [A]: filled("Alice", { phone: "111" }), [B]: filled("Bob") } });
+  setBlob({ statuses: {}, notes: {}, profile: filled("Bob", { email: B }), prefFilters: true, profileOwner: B, profileDirty: false });
+  mount({ sessionEmail: A, isLoggedIn: true });
+  await waitFor(() => api?.hydrated);
+  await sleep(300);
+  check("load 1 persists the placeholder as unowned and clean", getBlob().profileOwner === "" && getBlob().profileDirty === false, getBlob());
+  unmount();
+  calls = [];
+  renders = [];
+  mount({ sessionEmail: A, isLoggedIn: true });
+  await waitFor(() => api?.hydrated);
+  api.updateProfile({ school: "MIT" });
+  await sleep(1400);
+  check("load 2 (GET fails again): the edit sends no PUT", puts().length === 0, puts().map((p) => [p.body.profile.fullName, p.body.profile.school, p.result]));
+  check("A's server profile is untouched after load 2", server.profiles[A]?.fullName === "Alice" && server.profiles[A]?.phone === "111" && !server.profiles[A]?.school, server.profiles[A]);
+  unmount();
+  calls = [];
+  renders = [];
+  server.getMode = undefined;
+  mount({ sessionEmail: A, isLoggedIn: true });
+  await waitFor(() => api?.hydrated);
+  await sleep(1400);
+  check("a later successful sync shows Alice and uploads nothing", api.profile.fullName === "Alice" && puts().length === 0, { shown: api.profile.fullName, puts: puts() });
+  check("A's server profile is unchanged", server.profiles[A]?.fullName === "Alice" && server.profiles[A]?.phone === "111" && !server.profiles[A]?.school, server.profiles[A]);
 });
 
 unmount();
