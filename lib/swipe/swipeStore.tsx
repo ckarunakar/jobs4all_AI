@@ -206,7 +206,7 @@ interface Persisted {
   prefFilters?: boolean;
   /** Normalized email of the account this copy belongs to: set by sync, or
    *  claimed by a signed-in edit when sync could not confirm ownership (a
-   *  failed GET on an unowned copy). "" = guest-era, nobody's yet. Absent in
+   *  failed GET unless the copy was already this account's). "" = guest-era, nobody's yet. Absent in
    *  older data (then read from `profile.email`). Another account's copy is
    *  never shown to or uploaded by the signed-in account. */
   profileOwner?: string;
@@ -402,8 +402,8 @@ export function SwipeStoreProvider({
   const versionRef = useRef(0);
   const saverRef = useRef<ProfileSaver | null>(null);
   // The account this page's sync confirmed the browser copy belongs to (null
-  // = not confirmed: before the decision, or after a failed GET on an unowned
-  // copy). Only confirmed edits are saved; unconfirmed ones just claim the
+  // = not confirmed: before the decision, or after a failed GET unless the
+  // copy was already this account's). Only confirmed edits are saved; unconfirmed ones just claim the
   // copy. In memory only, reset on every hydration run.
   const confirmedForRef = useRef<string | null>(null);
 
@@ -498,7 +498,10 @@ export function SwipeStoreProvider({
         accountKey,
       );
       const editedDuringGet = versionRef.current !== versionAtStart;
-      const confirmed = decision !== "use-local" || storedOwner === accountKey;
+      // After a failed GET the copy counts as confirmed only when it was
+      // already this account's; a blank placeholder shown for another
+      // account's copy is only ever claimed by edits, never saved.
+      const confirmed = server.kind !== "error" || storedOwner === accountKey;
       confirmedForRef.current = confirmed ? accountKey : null;
       let resolved = { profile: seededProfile, prefFilters: seededPrefFilters };
       if (decision === "use-server" || decision === "start-blank") {
@@ -527,8 +530,9 @@ export function SwipeStoreProvider({
           // it, so mark them now to be saved like any other edit.
           if (editedDuringGet) setProfileDirty(true);
         } else {
-          // An unowned copy the server hasn't confirmed: nothing in it may be
-          // saved from this page (edits only claim it for this account).
+          // A copy the server hasn't confirmed (failed GET, not already this
+          // account's): nothing in it may be saved from this page (edits only
+          // claim it for this account).
           setProfileDirty(false);
         }
       }

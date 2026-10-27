@@ -89,6 +89,7 @@ globalThis.fetch = async (url, init = {}) => {
       if (server.getMode === "500") return resp(500, { ok: false, error: "Could not load profile." });
       if (!acct) return resp(401, { ok: false, error: "Not authenticated" });
       const p = server.profiles[acct];
+      if (server.getMode === "no-email") return resp(200, { ok: true, profile: p ?? null, prefFilters: true });
       return resp(200, {
         ok: true,
         email: acct,
@@ -922,6 +923,50 @@ await scenario("X2", "R13: a flush overlapping an in-flight save is confirmed; a
   note(`after reload: shown ${api.profile.fullName}; server ${server.profiles[A].fullName}`);
   check("the phone's newer edit survives the reload", server.profiles[A].fullName === "Alice from phone" && puts().length === 0, puts());
   check("the reload shows the phone's edit", api.profile.fullName === "Alice from phone");
+});
+
+await scenario("Y1", "R14: a stale tab whose GET is answered for another account never saves the blank placeholder over this account's profile", async () => {
+  freshScenario({ cookieEmail: B, profiles: { [A]: filled("Alice", { phone: "111" }), [B]: filled("Bob") } });
+  setBlob({ statuses: {}, notes: {}, profile: filled("Bob", { email: B }), prefFilters: true, profileOwner: B, profileDirty: false });
+  mount({ sessionEmail: A, isLoggedIn: true });
+  await waitFor(() => api?.hydrated);
+  await sleep(200);
+  check("Bob never shown as A", renders.every((r) => r.fullName !== "Bob"), names(renders));
+  api.updateProfile({ school: "MIT" });
+  await sleep(1400);
+  check("no PUT from the blank placeholder", puts().length === 0, puts().map((p) => [p.body.profile.fullName, p.result]));
+  check("blank copy only claimed, never dirty", getBlob().profileOwner === A && getBlob().profileDirty === false, getBlob());
+  unmount();
+  calls = [];
+  renders = [];
+  server.cookieEmail = A;
+  mount({ sessionEmail: A, isLoggedIn: true });
+  await waitFor(() => api?.hydrated);
+  await sleep(1400);
+  check("A's real sync shows Alice and uploads nothing", api.profile.fullName === "Alice" && puts().length === 0, { shown: api.profile.fullName, puts: puts() });
+  check("A's server profile keeps Alice", server.profiles[A]?.fullName === "Alice" && server.profiles[A]?.phone === "111", server.profiles[A]);
+});
+
+await scenario("Y2", "R14: a real GET failure on a copy owned by another account, then a working PUT, never overwrites the saved profile", async () => {
+  freshScenario({ cookieEmail: A, getMode: "500", profiles: { [A]: filled("Alice", { phone: "111" }), [B]: filled("Bob") } });
+  setBlob({ statuses: {}, notes: {}, profile: filled("Bob", { email: B }), prefFilters: true, profileOwner: B, profileDirty: false });
+  mount({ sessionEmail: A, isLoggedIn: true });
+  await waitFor(() => api?.hydrated);
+  api.updateProfile({ school: "MIT" });
+  await sleep(1400);
+  check("no PUT after the failed GET", puts().length === 0, puts().map((p) => [p.body.profile.fullName, p.result]));
+  check("A's server profile keeps Alice", server.profiles[A]?.fullName === "Alice" && server.profiles[A]?.phone === "111", server.profiles[A]);
+  check("blank copy only claimed, never dirty", getBlob().profileOwner === A && getBlob().profileDirty === false, getBlob());
+});
+
+await scenario("Y3", "a 200 profile answer without a top-level email is an error: the server profile is not applied", async () => {
+  freshScenario({ cookieEmail: A, getMode: "no-email", profiles: { [A]: filled("Server Alice") } });
+  setBlob({ statuses: {}, notes: {}, profile: filled("Local Alice", { email: A }), prefFilters: true, profileOwner: A, profileDirty: false });
+  mount({ sessionEmail: A, isLoggedIn: true });
+  await waitFor(() => api?.hydrated);
+  await sleep(200);
+  check("GET was made", gets().length >= 1);
+  check("the unverified server profile is not shown", renders.every((r) => r.fullName !== "Server Alice") && api.profile.fullName === "Local Alice", names(renders));
 });
 
 unmount();

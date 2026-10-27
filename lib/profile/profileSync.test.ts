@@ -194,6 +194,27 @@ test("a flush during an in-flight save is re-sent once both settle, and that re-
   assert.deepEqual(h.saved, [1, 2]);
 });
 
+test("a failed overlapped flush is re-sent once, and a failed re-send is not re-sent again", async () => {
+  const ds = [deferred(), deferred(), deferred()];
+  let n = 0;
+  const h = harness({ send: () => ds[n++].promise });
+  h.saver.schedule(job(1));
+  mock.timers.tick(1000);
+  h.saver.schedule(job(2));
+  h.saver.flush(true);
+  ds[1].resolve(false); // the overlapped flush fails first
+  ds[0].resolve(true);
+  await settle();
+  assert.deepEqual(h.saved, [1]);
+  assert.deepEqual(h.sends, [["v1", false], ["v2", true], ["v2", false]]); // re-sent once
+  ds[2].resolve(false);
+  await settle();
+  mock.timers.tick(10000);
+  await settle();
+  assert.deepEqual(h.sends, [["v1", false], ["v2", true], ["v2", false]]); // not again
+  assert.deepEqual(h.saved, [1]);
+});
+
 test("an overlapped flush is not re-sent when a newer edit was scheduled", async () => {
   const ds = [deferred(), deferred(), deferred()];
   let n = 0;
