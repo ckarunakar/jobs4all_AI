@@ -34,7 +34,7 @@ Every color has a `--color-*` mapping, so `text-accent-strong`, `bg-elevated`, `
 | `bg-wash` | 115deg wash-1..3 (0/45/100%) | Hero and app page background |
 | `bg-panel` | 120deg panel-1 to panel-2 | Feature panels, callouts |
 
-`banner-1` is tuned darker than the mockup so white text passes 3:1. Headline stops are checked against the wash.
+`banner-1` is tuned darker than the mockup so white text passes 3:1. Headline stops are checked against the wash. `bg-banner` stops only pass 3:1, so white text on it must be at least 18.66px bold (or 24px+).
 
 ## Shadows
 `shadow-card` (cards), `shadow-deep` (hero art, dialogs), `shadow-button` / `-hover` / `-press` (gradient buttons), `shadow-white` (white buttons), `shadow-up` (sticky bottom bars).
@@ -43,19 +43,22 @@ Every color has a `--color-*` mapping, so `text-accent-strong`, `bg-elevated`, `
 - **Buttons**: primary is `bg-brand`, white bold text, `shadow-button`; hover lifts 1px, brighter, `shadow-button-hover`; press sinks 1px with `shadow-button-press`; disabled is 45% opacity, no shadow. Secondary/outline is white with a 1.5px `border-input`, `text-button-ink`, `shadow-white`; hover lifts and uses `border-strong`. Danger is white with `danger-border` and `text-danger`. Ghost/link is `text-accent`, no fill. A link styled as a button is `<Link className={buttonVariants(...)}>`.
 - **Cards**: white, 20-24px radius, 1px `border`, `shadow-card`.
 - **Pills/tags**: fully rounded; `bg-primary-soft text-primary-soft-foreground`, or `bg-elevated text-muted`.
-- **Inputs**: white, 1px `border-input`, rounded-md; focus shows the ring.
+- **Inputs**: white, 1.5px `border-input`, rounded-md; focus shows the ring.
 - **Dialogs**: large radius, soft navy backdrop, `shadow-deep`.
 - **Skeleton**: pale lavender (`--border`) with a soft pulse.
 - **Focus**: every interactive element uses `focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2`.
 
 ## Score colors
-Fills (`excellent`, `recommended`, `caution`, `low`, `info`) are for bars, rings and tints. Score *text* uses the `-text` shades (`excellent-text`, `recommended-text`, `caution-text`, `low-text`, `info-text`), which pass AA. In code, `getScoreTextColorVar(score)` returns the right `var(--*-text)`. Score meter bars are a short light-to-dark gradient inside the tier color on a white or tinted track. `scale-none` and `scale-possible` color the skill-scale dots.
+Fills (`excellent`, `recommended`, `caution`, `low`, `info`) are for bars, rings and tints. Score *text* uses the `-text` shades (`excellent-text`, `recommended-text`, `caution-text`, `low-text`, `info-text`), which pass AA. In code, `getScoreTextColorVar(score)` returns the right `var(--*-text)`. Score meter bars are a short light-to-dark gradient inside the tier color on a white or tinted track. `scale-none` and `scale-possible` color the How It Works score-scale segments.
 
 ## Logo
-The logo PNG has an opaque white background. On white it is invisible; on tinted or gradient surfaces (the wash, the translucent app top bar) add `mix-blend-mode: multiply` (`mix-blend-multiply`) so the white drops out. Don't edit the file.
+The logo PNG has an opaque white background. On white it is invisible; on tinted or gradient surfaces (the wash, tinted hero bands) add `mix-blend-mode: multiply` (`mix-blend-multiply`) so the white drops out. Don't edit the file.
 
 ## Motion
 Every hover or press movement is prefixed `motion-safe:` (e.g. `motion-safe:hover:-translate-y-px`). Never use `hover:scale-*` or `active:scale-*`.
+
+## tailwind-merge
+`cn`/`buttonVariants` merge classes, grouping the custom utilities by prefix: `bg-brand`/`bg-panel`/`bg-wash` count as background colours, `text-gradient` as a text colour, and `shadow-card`/`shadow-white`/... as shadow colours. So `cn("shadow-white", "shadow-none")` keeps both; override with care. Plain template strings don't merge at all.
 
 ## Contrast test
 `lib/design/contrast.test.ts` reads the hex tokens from `:root` and checks: text tokens on every light surface (4.5:1), white on gradient buttons, danger and success (4.5:1), badge text on its 12% tint (4.5:1), and banner/headline stops for large text (3:1). Change a color token and run `node --test "lib/**/*.test.ts"`. Keep gradient stops and text tokens as 6-digit hex so the test can read them.

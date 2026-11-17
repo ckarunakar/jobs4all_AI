@@ -12,6 +12,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { GradientText, PageHero } from "@/components/marketing/primitives";
+import { cn } from "@/lib/utils/cn";
 import { SCORE_BANDS } from "@/lib/careerOps/scoreUtils";
 
 export const metadata = { title: "AI Tools · ITJobCafé" };
@@ -49,7 +50,7 @@ function ToolCard({
       {children}
       <Link
         href={href}
-        className={`${linkClass} mt-auto self-start pt-1.5 text-[15px] font-bold`}
+        className={cn(linkClass, "mt-auto self-start pt-1.5 text-[15px] font-bold")}
       >
         {linkText}
       </Link>
