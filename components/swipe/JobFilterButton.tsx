@@ -9,7 +9,7 @@
  */
 
 import { useCallback, useEffect, useState } from "react";
-import { Check, Filter, X } from "lucide-react";
+import { Check, SlidersHorizontal, X } from "lucide-react";
 import { Dialog } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
@@ -177,8 +177,8 @@ export function JobFilterButton() {
         </button>
       )}
 
-      <Button variant="ghost" size="sm" onClick={openPanel}>
-        <Filter className="size-4" />
+      <Button variant="secondary" size="sm" onClick={openPanel}>
+        <SlidersHorizontal className="size-4" />
         Filters
         {activeFilterCount > 0 && (
           <Badge variant="primary" className="ml-1">

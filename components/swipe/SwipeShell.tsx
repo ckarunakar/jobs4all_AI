@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { RotateCcw } from "lucide-react";
 import { Logo } from "@/components/layout/Logo";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { MobileNav } from "./MobileNav";
 import { useSwipeStore } from "@/lib/swipe/swipeStore";
 
@@ -28,8 +28,8 @@ export function SwipeShell({
   const { reset, isLoggedIn } = useSwipeStore();
 
   return (
-    <div className="flex min-h-screen flex-col bg-background">
-      <header className="sticky top-0 z-20 flex h-14 items-center justify-between border-b-2 border-border bg-background px-4">
+    <div className="flex min-h-screen flex-col bg-wash">
+      <header className="sticky top-0 z-20 flex h-14 items-center justify-between bg-card px-4">
         <Link href="/" aria-label="ITJobCafé home" className="inline-flex rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
           <Logo height={30} />
         </Link>
@@ -40,11 +40,12 @@ export function SwipeShell({
             Reset
           </Button>
           {!isLoggedIn && (
-            <Link href="/login">
-              <Button size="sm">Log in</Button>
+            <Link href="/login" className={buttonVariants({ size: "sm" })}>
+              Log in
             </Link>
           )}
         </div>
+        <div aria-hidden="true" className="absolute inset-x-0 bottom-0 h-[3px] bg-banner" />
       </header>
 
       <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col px-4 pb-24 pt-5 sm:px-6">

@@ -16,7 +16,7 @@ export function MobileNav() {
   const items = isLoggedIn ? SWIPE_NAV_ITEMS : [...SWIPE_NAV_ITEMS, LOGIN_ITEM];
 
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-30 border-t-2 border-border bg-background">
+    <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-card shadow-up">
       <div className="mx-auto flex max-w-2xl items-stretch justify-around">
         {items.map((item) => {
           const active = pathname === item.href;
@@ -24,15 +24,25 @@ export function MobileNav() {
             <Link
               key={item.href}
               href={item.href}
+              aria-current={active ? "page" : undefined}
               className={cn(
-                "flex flex-1 flex-col items-center gap-1 py-2.5 text-[11px] font-semibold transition-colors",
-                active ? "text-primary" : "text-muted hover:text-foreground",
+                "flex flex-1 flex-col items-center gap-1 py-2 text-[11px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
+                active
+                  ? "font-bold text-accent-strong"
+                  : "text-muted hover:text-foreground",
               )}
             >
-              <item.icon
-                className="size-5"
-                strokeWidth={active ? 2.5 : 2}
-              />
+              <span
+                className={cn(
+                  "rounded-full px-4 py-1",
+                  active && "bg-panel",
+                )}
+              >
+                <item.icon
+                  className="size-5"
+                  strokeWidth={active ? 2.5 : 2}
+                />
+              </span>
               {item.label}
             </Link>
           );
