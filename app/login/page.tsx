@@ -12,7 +12,7 @@ export default async function LoginPage() {
   if (session?.user) redirect("/swipe");
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center bg-background px-4 py-10">
+    <main className="flex min-h-screen flex-col items-center justify-center bg-wash px-4 py-10">
       <div className="w-full max-w-sm">
         <div className="mb-6 flex flex-col items-center text-center">
           <Link href="/" aria-label="ITJobCafé home" className="inline-flex rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
@@ -26,7 +26,7 @@ export default async function LoginPage() {
           </p>
         </div>
 
-        <div className="rounded-lg border-2 border-border bg-card p-5">
+        <div className="rounded-3xl border border-border bg-card p-6 shadow-card">
           <LoginForm googleEnabled={googleConfigured} />
         </div>
 

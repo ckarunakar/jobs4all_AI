@@ -134,7 +134,7 @@ export function SwipeResumeUploadCard() {
         disabled={uploading}
         className="flex w-full flex-col items-center justify-center rounded-lg border border-dashed border-border-strong bg-surface/50 px-6 py-8 text-center transition-colors hover:border-primary/50 hover:bg-elevated disabled:cursor-not-allowed disabled:opacity-60"
       >
-        <div className="flex size-11 items-center justify-center rounded-full bg-elevated text-accent">
+        <div className="flex size-11 items-center justify-center rounded-full bg-panel text-accent">
           {uploading ? (
             <Loader2 className="size-5 animate-spin" />
           ) : (

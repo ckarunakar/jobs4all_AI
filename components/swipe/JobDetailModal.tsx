@@ -131,7 +131,7 @@ export function JobDetailModal({
       </div>
 
       {/* Score */}
-      <div className="mt-5 rounded-2xl border border-border bg-surface p-4">
+      <div className="mt-5 rounded-2xl border border-border bg-panel p-4">
         <ScoreGate
           job={job}
           scored={
@@ -174,7 +174,7 @@ export function JobDetailModal({
             <ul className="space-y-2">
               {ai.pros.map((s) => (
                 <li key={s} className="flex items-start gap-2 text-sm">
-                  <ThumbsUp className="mt-0.5 size-3.5 shrink-0 text-[var(--recommended)]" />
+                  <ThumbsUp className="mt-0.5 size-3.5 shrink-0 text-recommended-text" />
                   <span className="text-muted">{s}</span>
                 </li>
               ))}
@@ -188,7 +188,7 @@ export function JobDetailModal({
               {ai.warnings.map((w) => (
                 <li
                   key={w}
-                  className="flex items-start gap-2 text-sm text-[var(--caution)]"
+                  className="flex items-start gap-2 text-sm text-caution-text"
                 >
                   <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
                   <span>{w}</span>

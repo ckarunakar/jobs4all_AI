@@ -101,7 +101,7 @@ export default function SwipePage() {
           </div>
           <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-elevated">
             <div
-              className="h-full rounded-full bg-primary transition-all"
+              className="h-full rounded-full bg-brand transition-all"
               style={{ width: `${total ? (reviewed / total) * 100 : 0}%` }}
             />
           </div>
@@ -140,7 +140,7 @@ export default function SwipePage() {
 
         {/* Jobs feed failed to load. */}
         {error && (
-          <div className="mb-4 shrink-0 rounded-lg border-2 border-[var(--caution)]/40 bg-[var(--caution)]/10 px-4 py-2.5 text-xs text-[var(--caution)]">
+          <div className="mb-4 shrink-0 rounded-lg border border-[var(--caution)]/40 bg-[var(--caution)]/10 px-4 py-2.5 text-xs text-caution-text">
             Couldn&apos;t load jobs ({error}). Try again in a moment.
           </div>
         )}

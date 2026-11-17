@@ -17,7 +17,14 @@ function filesUnder(...dirs: string[]): string[] {
   return out;
 }
 
-const FILES = filesUnder("components/ui").filter((f) => !f.endsWith(".test.ts"));
+// PrivacyPolicy and DeleteAccountCard are outside this restyle's scope.
+const EXCLUDED = [
+  "components/legal/PrivacyPolicy.tsx",
+  "components/settings/DeleteAccountCard.tsx",
+];
+const FILES = filesUnder("app", "components").filter(
+  (f) => !f.endsWith(".test.ts") && !EXCLUDED.includes(f),
+);
 const offenders = (re: RegExp) => FILES.filter((f) => re.test(readFileSync(f, "utf8")));
 
 test("no scale-on-hover or scale-on-press", () => {
@@ -25,4 +32,13 @@ test("no scale-on-hover or scale-on-press", () => {
 });
 test("every hover/press movement respects reduced motion", () => {
   assert.deepEqual(offenders(/(?<!motion-safe:)\b(hover|active):-?translate-/), []);
+});
+test("no 2px borders", () => {
+  assert.deepEqual(offenders(/\bborder(-[tblr])?-2\b/), []);
+});
+test("no fill colors used as text", () => {
+  assert.deepEqual(offenders(/text-\[var\(--(excellent|recommended|caution|info)\)\]/), []);
+});
+test("no flat grid/soft backgrounds", () => {
+  assert.deepEqual(offenders(/\bbg-(grid|soft)\b/), []);
 });

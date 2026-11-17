@@ -35,7 +35,7 @@ export function IntegrationStatusCard({
   return (
     <Card className="p-5">
       <div className="flex items-start gap-4">
-        <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-elevated text-accent">
+        <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-panel text-accent">
           <Icon className="size-5" />
         </div>
         <div className="min-w-0 flex-1">

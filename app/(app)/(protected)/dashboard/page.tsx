@@ -123,7 +123,7 @@ export default function DashboardPage() {
             </Link>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center justify-around rounded-lg border border-border bg-surface py-4 text-center">
+            <div className="flex items-center justify-around rounded-lg border border-border bg-panel py-4 text-center">
               <Activity label="Interested" value={metrics.interested} />
               <Activity label="Saved" value={metrics.saved} />
               <Activity label="Skipped" value={metrics.skipped} />

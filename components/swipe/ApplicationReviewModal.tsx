@@ -152,7 +152,7 @@ export function ApplicationReviewModal({
     >
       <div className="space-y-6">
         {/* Job summary */}
-        <div className="flex items-center justify-between rounded-lg border border-border bg-surface p-4">
+        <div className="flex items-center justify-between rounded-lg border border-border bg-panel p-4">
           <div>
             <p className="text-sm font-medium">{job.title}</p>
             <p className="text-xs text-muted">
@@ -181,7 +181,7 @@ export function ApplicationReviewModal({
         {/* Profile summary */}
         <div className="space-y-2">
           <Label>Your profile</Label>
-          <div className="grid grid-cols-2 gap-2 rounded-lg border border-border bg-surface p-4 text-sm">
+          <div className="grid grid-cols-2 gap-2 rounded-lg border border-border bg-panel p-4 text-sm">
             <Detail label="Name" value={profile.fullName} />
             <Detail label="School" value={profile.school} />
             <Detail label="Major" value={profile.major} />

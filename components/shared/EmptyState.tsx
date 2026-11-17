@@ -23,7 +23,7 @@ export function EmptyState({
         className,
       )}
     >
-      <div className="flex size-12 items-center justify-center rounded-full bg-elevated text-muted">
+      <div className="flex size-12 items-center justify-center rounded-full bg-panel text-accent">
         <Icon className="size-6" />
       </div>
       <h3 className="mt-4 font-medium text-foreground">{title}</h3>

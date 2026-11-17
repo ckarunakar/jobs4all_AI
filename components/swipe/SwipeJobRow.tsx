@@ -36,7 +36,7 @@ export function SwipeJobRow({
         </Badge>
       )}
       <ScoreBadge score={swipeJobScore(job)} />
-      <ChevronRight className="size-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+      <ChevronRight className="size-4 text-muted-foreground transition-transform group-hover:motion-safe:translate-x-0.5" />
     </button>
   );
 }
