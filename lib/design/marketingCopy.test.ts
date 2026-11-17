@@ -99,3 +99,12 @@ test("How It Works carries the corrected copy and reads the scale from SCORE_BAN
     assert.ok(s.includes(t), `missing: ${t}`);
   assert.ok(!s.includes("Not recommended") && !s.includes("Possible"), "tier labels must come from SCORE_BANDS");
 });
+
+test("FAQ carries the corrected copy", () => {
+  const s = source("app/(marketing)/faq");
+  for (const t of [
+    "Not to look around: you can browse and swipe as a guest. To see fit scores, create an account and upload your résumé.",
+    "PDF or Word (.docx), up to 5 MB.", "Anthropic or DeepSeek", "Android and iPhone apps are on the way.",
+    "Go to Settings and choose Delete account, then confirm.", "Still have a question?", "/support", "/privacy"])
+    assert.ok(s.includes(t), `missing: ${t}`);
+});
