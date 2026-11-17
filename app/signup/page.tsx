@@ -15,7 +15,9 @@ export default async function SignupPage() {
     <main className="flex min-h-screen flex-col items-center justify-center bg-background px-4 py-10">
       <div className="w-full max-w-sm">
         <div className="mb-6 flex flex-col items-center text-center">
-          <Logo />
+          <Link href="/" aria-label="ITJobCafé home">
+            <Logo height={44} className="mix-blend-multiply" />
+          </Link>
           <h1 className="mt-4 text-2xl font-bold tracking-tight">
             Create your account
           </h1>

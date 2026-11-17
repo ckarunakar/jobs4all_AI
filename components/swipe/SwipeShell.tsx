@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { RotateCcw } from "lucide-react";
 import { Logo } from "@/components/layout/Logo";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { MobileNav } from "./MobileNav";
 import { useSwipeStore } from "@/lib/swipe/swipeStore";
@@ -31,14 +30,8 @@ export function SwipeShell({
   return (
     <div className="flex min-h-screen flex-col bg-background">
       <header className="sticky top-0 z-20 flex h-14 items-center justify-between border-b-2 border-border bg-background px-4">
-        <Link href="/" className="flex items-center gap-2">
-          <Logo showWordmark={false} />
-          <span className="text-sm font-bold">
-            ITJob<span className="text-primary">Cafe</span>
-          </span>
-          <Badge variant="primary" className="ml-1">
-            Swipe
-          </Badge>
+        <Link href="/" aria-label="ITJobCafé home">
+          <Logo height={30} />
         </Link>
         <div className="flex items-center gap-1.5">
           {headerActions}
