@@ -11,10 +11,10 @@ export function LegalLinks({ className }: { className?: string }) {
         className,
       )}
     >
-      <Link href="/privacy" className="hover:text-foreground hover:underline">
+      <Link href="/privacy" className="rounded-sm hover:text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
         Privacy policy
       </Link>
-      <Link href="/support" className="hover:text-foreground hover:underline">
+      <Link href="/support" className="rounded-sm hover:text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
         Support
       </Link>
     </nav>
