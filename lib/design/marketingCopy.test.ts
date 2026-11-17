@@ -68,3 +68,22 @@ test("landing carries the corrected copy", () => {
   ])
     assert.ok(s.includes(t), `missing: ${t}`);
 });
+
+test("AI Tools carries the corrected copy and reads tiers from SCORE_BANDS", () => {
+  const s = source("app/(marketing)/ai-tools");
+  for (const t of [
+    "Four tools work together to find the jobs worth your time. Here is what each one does, and what it never does.",
+    "Upload your résumé and fill in your profile: skills, target roles and locations. The AI reads both every time it scores a job for you.",
+    "Once your résumé is uploaded, ask the AI to score a job, or the next 10 at once. 4.0 and up is worth applying; 4.5 and up is an excellent fit.",
+    "Narrow the feed by skills, city, job type and date posted, or let your profile preferences filter for you. Then filter your applications by fit.",
+    "The AI scores and explains. You decide.",
+    "Nothing is ever applied automatically.",
+    "Up to 5 MB",
+    "SCORE_BANDS",
+  ])
+    assert.ok(s.includes(t), `missing: ${t}`);
+  assert.ok(
+    !s.includes("Not recommended") && !s.includes("Possible"),
+    "tier labels must come from SCORE_BANDS",
+  );
+});
