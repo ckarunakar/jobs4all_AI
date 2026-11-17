@@ -87,3 +87,15 @@ test("AI Tools carries the corrected copy and reads tiers from SCORE_BANDS", () 
     "tier labels must come from SCORE_BANDS",
   );
 });
+
+test("How It Works carries the corrected copy and reads the scale from SCORE_BANDS", () => {
+  const s = source("app/(marketing)/how-it-works", "components/marketing/ScoreScale.tsx");
+  for (const t of [
+    "No account needed to start: browse and swipe as a guest. Sign up and add your résumé to see your fit scores.",
+    "Create an account, add a PDF or .docx and fill in your job preferences.",
+    "Ask the AI to score a job, or the next 10 at once. Each gets a 1.0–5.0 score with the reasons behind it.",
+    "Start swiping now as a guest. Sign up and add your résumé to see your fit scores.",
+    "4.0 is where we recommend applying.", "SCORE_BANDS"])
+    assert.ok(s.includes(t), `missing: ${t}`);
+  assert.ok(!s.includes("Not recommended") && !s.includes("Possible"), "tier labels must come from SCORE_BANDS");
+});
