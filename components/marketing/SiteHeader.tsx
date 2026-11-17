@@ -14,7 +14,11 @@ const RING =
 
 export function SiteHeader({ loggedIn }: { loggedIn: boolean }) {
   const pathname = usePathname();
-  const [open, setOpen] = useState(false);
+  // The pathname the menu was opened on. The menu counts as open only while
+  // the route is unchanged, so any navigation (logo, back/forward, links)
+  // closes it without an effect.
+  const [openedAt, setOpenedAt] = useState<string | null>(null);
+  const open = openedAt !== null && openedAt === pathname;
   const menuButtonRef = useRef<HTMLButtonElement>(null);
 
   // Escape closes the panel and returns focus to the menu button. The state
@@ -23,7 +27,7 @@ export function SiteHeader({ loggedIn }: { loggedIn: boolean }) {
     if (!open) return;
     function onKeyDown(e: KeyboardEvent) {
       if (e.key === "Escape") {
-        setOpen(false);
+        setOpenedAt(null);
         menuButtonRef.current?.focus();
       }
     }
@@ -76,7 +80,7 @@ export function SiteHeader({ loggedIn }: { loggedIn: boolean }) {
           type="button"
           aria-expanded={open}
           aria-controls="site-menu"
-          onClick={() => setOpen((v) => !v)}
+          onClick={() => setOpenedAt(open ? null : pathname)}
           className={cn(
             buttonVariants({ variant: "outline" }),
             "lg:hidden",
@@ -101,7 +105,7 @@ export function SiteHeader({ loggedIn }: { loggedIn: boolean }) {
                   <Link
                     href={href}
                     aria-current={active ? "page" : undefined}
-                    onClick={() => setOpen(false)}
+                    onClick={() => setOpenedAt(null)}
                     className={cn(
                       "block rounded-md py-3 text-base",
                       RING,
@@ -118,7 +122,7 @@ export function SiteHeader({ loggedIn }: { loggedIn: boolean }) {
           </ul>
           <Link
             href={ctaHref}
-            onClick={() => setOpen(false)}
+            onClick={() => setOpenedAt(null)}
             className={buttonVariants({ className: "mt-3 w-full" })}
           >
             {ctaLabel}
