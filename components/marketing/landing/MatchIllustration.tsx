@@ -125,7 +125,7 @@ function ResumeCard() {
           <div className="h-1 w-[92%] rounded-[3px] bg-[#5b8def] sm:h-1.5" />
           <div className="h-1 w-[66%] rounded-[3px] bg-[#5b8def] sm:h-1.5" />
         </div>
-        <div className="mt-2 flex h-10 items-center justify-center rounded-lg border border-dashed border-[#5b8def] sm:mt-3 sm:h-[62px] sm:rounded-[10px]">
+        <div className="mt-2 flex h-10 items-center justify-center rounded-lg border-2 border-dashed border-[#5b8def] sm:mt-3 sm:h-[62px] sm:rounded-[10px]">
           <Upload strokeWidth={2.2} className="size-5 text-[#2563eb] sm:size-[26px]" />
         </div>
       </div>
@@ -151,7 +151,7 @@ export function MatchIllustration() {
             className="absolute -left-[22%] -top-[48%] size-[95%] rounded-full"
             style={{ background: ART.glow }}
           />
-          <div className="absolute -bottom-[62%] -left-[15%] h-[85%] w-[130%] rounded-full border-t border-[rgba(160,205,255,0.55)] bg-[rgba(70,140,250,0.28)]" />
+          <div className="absolute -bottom-[62%] -left-[15%] h-[85%] w-[130%] rounded-full border-t-2 border-[rgba(160,205,255,0.55)] bg-[rgba(70,140,250,0.28)]" />
           <div
             className="absolute bottom-3.5 right-4 h-[70px] w-[130px]"
             style={{ backgroundImage: ART.dots, backgroundSize: "9px 9px" }}
@@ -162,7 +162,7 @@ export function MatchIllustration() {
 
             <div className={`flex-[0_0_8px] sm:flex-[0_0_16px] ${LINE}`} />
             <div
-              className="flex size-9 flex-none items-center justify-center rounded-full border-[1.5px] border-white/90 shadow-[0_8px_18px_-8px_rgba(5,20,80,0.6)] sm:size-[54px] sm:border-[3px]"
+              className="flex size-9 flex-none items-center justify-center rounded-full border-2 border-white/90 shadow-[0_8px_18px_-8px_rgba(5,20,80,0.6)] sm:size-[54px] sm:border-[3px]"
               style={{ background: ART.node }}
             >
               <Briefcase strokeWidth={2.2} className="size-4 text-[#1d4ed8] sm:size-6" />

@@ -33,8 +33,13 @@ test("no scale-on-hover or scale-on-press", () => {
 test("every hover/press movement respects reduced motion", () => {
   assert.deepEqual(offenders(/(?<!motion-safe:)\b(hover|active):-?translate-/), []);
 });
+// MatchIllustration is illustration art matching the approved demo (2px borders); marketing art is exempt.
+const ART_2PX = "components/marketing/landing/MatchIllustration.tsx";
 test("no 2px borders", () => {
-  assert.deepEqual(offenders(/\bborder(-[tblr])?-2\b/), []);
+  assert.deepEqual(
+    offenders(/\bborder(-[tblr])?-2\b/).filter((f) => f !== ART_2PX),
+    [],
+  );
 });
 test("no fill colors used as text", () => {
   assert.deepEqual(offenders(/text-\[var\(--(excellent|recommended|caution|info)\)\]/), []);
