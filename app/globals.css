@@ -215,11 +215,14 @@ body {
   letter-spacing: -0.011em;
 }
 
-/* Headings carry the hierarchy: bold + tight tracking (design.md). */
-h1,
-h2,
-h3 {
-  letter-spacing: -0.02em;
+@layer base {
+  /* Headings carry the hierarchy: bold + tight tracking (design.md).
+     In the base layer so Tailwind tracking-* utilities can override it. */
+  h1,
+  h2,
+  h3 {
+    letter-spacing: -0.02em;
+  }
 }
 
 /* Light scrollbars. */

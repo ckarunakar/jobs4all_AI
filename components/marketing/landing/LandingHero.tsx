@@ -38,8 +38,7 @@ export function LandingHero() {
           <Eyebrow>
             <span aria-hidden="true">✦</span> AI-POWERED CAREER MATCHING
           </Eyebrow>
-          {/* `!`: globals.css sets h1 letter-spacing outside any layer, which beats utilities. */}
-          <h1 className="mt-6 text-[clamp(42px,5.4vw,78px)] font-extrabold leading-[1.02] tracking-[-0.035em]! text-foreground">
+          <h1 className="mt-6 text-[clamp(42px,5.4vw,78px)] font-extrabold leading-[1.02] tracking-[-0.035em] text-foreground">
             <span className="block">Know Your Job</span>{" "}
             <span className="block">
               <GradientText>Matching Score.</GradientText>
