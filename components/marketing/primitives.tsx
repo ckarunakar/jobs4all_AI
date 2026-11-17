@@ -41,7 +41,7 @@ export function PageHero({
     <section className="relative overflow-hidden bg-wash">
       <div
         aria-hidden="true"
-        className="absolute right-[8%] top-[30px] size-[150px] rotate-[18deg] rounded-[42%] bg-[rgba(244,212,228,0.6)]"
+        className="absolute right-[8%] hidden sm:block top-[30px] size-[150px] rotate-[18deg] rounded-[42%] bg-[rgba(244,212,228,0.6)]"
       />
       <div
         className={cn(

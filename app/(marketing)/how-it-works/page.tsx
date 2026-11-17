@@ -23,7 +23,7 @@ const steps = [
     body: "Swipe right on jobs you like, left to skip, or save for later. Filter by skills, city, type and date.",
   },
   {
-    tile: "linear-gradient(135deg,#d862a6,#f59e0b)",
+    tile: "linear-gradient(135deg,#d862a6,#b45309)",
     title: "Review and apply",
     body: "Work through the checklist, then apply on the employer’s site when you’re ready. Track every job in Applications.",
   },
@@ -62,7 +62,16 @@ export default function HowItWorksPage() {
               </div>
               <h2 className="mt-4 text-[21px] font-extrabold">{s.title}</h2>
               <p className="mt-2 text-[15.5px] leading-[1.6] text-muted">
-                {s.body}
+                {s.body.split("1.0–5.0").flatMap((part, n) =>
+                  n === 0
+                    ? [part]
+                    : [
+                        <span key={n} className="whitespace-nowrap">
+                          1.0–5.0
+                        </span>,
+                        part,
+                      ],
+                )}
               </p>
             </li>
           ))}
@@ -98,7 +107,11 @@ export default function HowItWorksPage() {
           <div className="flex flex-wrap gap-3.5">
             <Link
               href="/swipe"
-              className={buttonVariants({ variant: "secondary", size: "lg" })}
+              className={buttonVariants({
+                variant: "secondary",
+                size: "lg",
+                className: "text-[19px] font-bold",
+              })}
             >
               Find My Matches ↗
             </Link>
@@ -106,7 +119,7 @@ export default function HowItWorksPage() {
               href="/profile"
               className={cn(
                 buttonVariants({ variant: "ghost", size: "lg" }),
-                "border-[1.5px] border-white/80 font-bold text-white hover:bg-white/10 hover:text-white",
+                "border-[1.5px] border-white/80 text-[19px] font-bold text-white hover:bg-white/10 hover:text-white",
               )}
             >
               Set Up Profile →
