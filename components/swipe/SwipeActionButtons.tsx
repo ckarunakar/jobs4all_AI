@@ -34,7 +34,7 @@ function RoundButton({
       onClick={onClick}
       disabled={disabled}
       className={cn(
-        "flex items-center justify-center rounded-full border-2 bg-card transition-transform hover:scale-110 active:scale-95 disabled:pointer-events-none disabled:opacity-40",
+        "flex items-center justify-center rounded-full border-[1.5px] bg-card shadow-white transition-transform focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 motion-safe:hover:-translate-y-0.5 motion-safe:active:translate-y-px disabled:pointer-events-none disabled:opacity-40",
         className,
       )}
     >
@@ -58,7 +58,7 @@ export function SwipeActionButtons({
           label="Skip"
           onClick={onSkip}
           disabled={disabled}
-          className="size-14 border-[var(--danger)]/40 text-[var(--danger)] hover:border-[var(--danger)]"
+          className="size-14 border-danger-border text-danger"
         >
           <X className="size-6" />
         </RoundButton>
@@ -67,7 +67,7 @@ export function SwipeActionButtons({
           label="Save"
           onClick={onSave}
           disabled={disabled}
-          className="size-12 border-[var(--info)]/40 text-[var(--info)] hover:border-[var(--info)]"
+          className="size-12 border-[var(--info)]/30 text-info-text"
         >
           <Bookmark className="size-5" />
         </RoundButton>
@@ -76,7 +76,7 @@ export function SwipeActionButtons({
           label="Details"
           onClick={onDetails}
           disabled={disabled}
-          className="size-12 border-border-strong text-muted hover:border-foreground hover:text-foreground"
+          className="size-12 border-border-input text-muted"
         >
           <SquareArrowOutUpRight className="size-5" />
         </RoundButton>
@@ -85,7 +85,7 @@ export function SwipeActionButtons({
           label="Interested"
           onClick={onInterested}
           disabled={disabled}
-          className="size-14 border-[var(--recommended)]/40 text-[var(--recommended)] hover:border-[var(--recommended)]"
+          className="size-14 border-transparent bg-brand text-white shadow-button"
         >
           <Check className="size-6" />
         </RoundButton>

@@ -70,7 +70,7 @@ export function ScoreGate({
         {busy ? "AI scoring…" : "Ask AI to score"}
       </Button>
       {error && (
-        <p className="text-xs text-[var(--caution)]">{error}</p>
+        <p className="text-xs text-caution-text">{error}</p>
       )}
     </div>
   );

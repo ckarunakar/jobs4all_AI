@@ -3,9 +3,9 @@ import { cn } from "@/lib/utils/cn";
 type TagTone = "default" | "primary" | "muted";
 
 const TONES: Record<TagTone, string> = {
-  default: "border-border bg-elevated text-muted",
-  primary: "border-primary/30 bg-primary-soft text-accent",
-  muted: "border-border bg-transparent text-muted-foreground",
+  default: "border-transparent bg-elevated text-muted",
+  primary: "border-transparent bg-primary-soft text-primary-soft-foreground",
+  muted: "border-border text-muted-foreground",
 };
 
 /** Small skill / tech-stack chip. */
@@ -21,7 +21,7 @@ export function TagPill({
   return (
     <span
       className={cn(
-        "inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium",
+        "inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium",
         TONES[tone],
         className,
       )}
