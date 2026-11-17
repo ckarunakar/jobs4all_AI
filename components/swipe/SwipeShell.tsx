@@ -30,7 +30,7 @@ export function SwipeShell({
   return (
     <div className="flex min-h-screen flex-col bg-background">
       <header className="sticky top-0 z-20 flex h-14 items-center justify-between border-b-2 border-border bg-background px-4">
-        <Link href="/" aria-label="ITJobCafé home">
+        <Link href="/" aria-label="ITJobCafé home" className="inline-flex rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
           <Logo height={30} />
         </Link>
         <div className="flex items-center gap-1.5">

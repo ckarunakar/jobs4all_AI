@@ -15,7 +15,7 @@ export default async function LoginPage() {
     <main className="flex min-h-screen flex-col items-center justify-center bg-background px-4 py-10">
       <div className="w-full max-w-sm">
         <div className="mb-6 flex flex-col items-center text-center">
-          <Link href="/" aria-label="ITJobCafé home">
+          <Link href="/" aria-label="ITJobCafé home" className="inline-flex rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
             <Logo height={44} className="mix-blend-multiply" />
           </Link>
           <h1 className="mt-4 text-2xl font-bold tracking-tight">
