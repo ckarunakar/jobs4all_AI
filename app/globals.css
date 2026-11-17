@@ -1,45 +1,110 @@
 @import "tailwindcss";
+/* Tailwind scans every committed file for class names; keep docs and test
+   regex strings out of that scan so they can't emit invalid CSS. */
+@source not "../docs";
+@source not "../lib/**/*.test.ts";
 
 /*
-  ITJobCafe — flat, light design tokens (see types/design.md).
-  Confident reduction: zero artificial depth (no shadows/blur), bold color
-  blocks, geometric purity, typography-led hierarchy. Tokens are centralized
-  here so components stay color-literal-free.
+  ITJobCafe — light gradient design tokens (see types/design.md).
+  Soft lavender hairlines, blue-to-violet gradients, tinted shadows. Tokens are
+  centralized here so components stay color-literal-free. Contrast of the text
+  and gradient pairs is enforced by lib/design/contrast.test.ts.
 */
 
 :root {
   /* Surfaces */
-  --background: #ffffff; /* Pure white canvas */
-  --surface: #f3f4f6; /* Gray 100 — secondary blocks */
-  --card: #ffffff; /* White cards on gray sections */
-  --card-hover: #f3f4f6; /* Subtle tint on hover */
-  --elevated: #f3f4f6; /* Gray 100 — inputs / chips */
-  --border: #e5e7eb; /* Gray 200 — used sparingly */
-  --border-strong: #d1d5db; /* Gray 300 — bold borders */
-  --foreground: #111827; /* Gray 900 — sharp text */
-  --muted: #6b7280; /* Gray 500 */
-  --muted-foreground: #9ca3af; /* Gray 400 */
+  --background: #ffffff;
+  --surface: #f7f5fd;
+  --card: #ffffff;
+  --card-hover: #faf8ff;
+  --elevated: #f4f2fb;
+
+  /* Borders */
+  --border: #ece7f7;
+  --border-input: #e6e1f5;
+  --border-strong: #c9bff0;
+
+  /* Text */
+  --foreground: #141a3a;
+  --muted: #4b5268;
+  --muted-foreground: #636a82;
 
   /* Brand */
-  --primary: #3b82f6; /* Blue 500 — the action color */
+  --primary: #2563eb;
+  --primary-end: #7c3aed;
   --primary-foreground: #ffffff;
-  --primary-soft: rgba(59, 130, 246, 0.1);
-  --secondary: #10b981; /* Emerald 500 — supporting accent */
-  --warning: #f59e0b; /* Amber 500 — highlights/badges */
-  /* `accent` is used widely as emphasis/link text; amber fails contrast on
-     white, so it maps to Blue 600 for readable accents. */
-  --accent: #2563eb;
+  --primary-soft: #eef2ff;
+  --primary-soft-foreground: #3730a3;
+  --accent: #4c3fc4;
+  --accent-strong: #5b45d6;
+  --eyebrow: #6b46c1;
+  --button-ink: #2e2a6b;
+  --secondary: #10b981;
+  --warning: #f59e0b;
 
-  /* Score / status semantics (light-mode solids) */
-  --excellent: #10b981; /* Emerald */
-  --recommended: #22c55e; /* Green 500 */
-  --caution: #f59e0b; /* Amber */
-  --low: #6b7280; /* Gray */
-  --danger: #ef4444; /* Red 500 */
-  --info: #3b82f6; /* Blue */
+  /* Gradient stops */
+  --banner-1: #3b8fd0;
+  --banner-2: #5a74e2;
+  --banner-3: #8b5bd6;
+  --banner-4: #d862a6;
+  --headline-1: #3b82f6;
+  --headline-2: #6d5ce8;
+  --headline-3: #ae4fca;
+  --headline-4: #e0569a;
+  --wash-1: #f8f2fc;
+  --wash-2: #f4f1fc;
+  --wash-3: #edf3fd;
+  --panel-1: #eef4ff;
+  --panel-2: #f3efff;
 
-  --ring: rgba(59, 130, 246, 0.6);
-  --radius: 0.5rem;
+  /* Score fills (bars, rings) */
+  --excellent: #10b981;
+  --recommended: #22c55e;
+  --caution: #f59e0b;
+  --low: #6b7280;
+  --info: #3b82f6;
+
+  /* Score text shades (AA on light surfaces) */
+  --excellent-text: #047857;
+  --recommended-text: #166534;
+  --caution-text: #a74b06;
+  --low-text: #4b5563;
+  --info-text: #1d4ed8;
+
+  /* Scale extras */
+  --scale-none: #d1d5db;
+  --scale-possible: #fcd34d;
+
+  /* Danger */
+  --danger: #c0392b;
+  --danger-border: #f3c7c7;
+
+  --ring: #5b45d6;
+  --radius: 0.875rem;
+
+  /* Gradients */
+  --gradient-brand: linear-gradient(90deg, var(--primary), var(--primary-end));
+  --gradient-banner: linear-gradient(
+    90deg,
+    var(--banner-1) 0%,
+    var(--banner-2) 32%,
+    var(--banner-3) 66%,
+    var(--banner-4) 100%
+  );
+  --gradient-headline: linear-gradient(
+    90deg,
+    var(--headline-1) 0%,
+    var(--headline-2) 42%,
+    var(--headline-3) 74%,
+    var(--headline-4) 100%
+  );
+  --gradient-wash: linear-gradient(
+    115deg,
+    var(--wash-1) 0%,
+    var(--wash-2) 45%,
+    var(--wash-3) 100%
+  );
+  --gradient-panel: linear-gradient(120deg, var(--panel-1), var(--panel-2));
 }
 
 @theme inline {
@@ -49,17 +114,37 @@
   --color-card-hover: var(--card-hover);
   --color-elevated: var(--elevated);
   --color-border: var(--border);
+  --color-border-input: var(--border-input);
   --color-border-strong: var(--border-strong);
   --color-foreground: var(--foreground);
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
 
   --color-primary: var(--primary);
+  --color-primary-end: var(--primary-end);
   --color-primary-foreground: var(--primary-foreground);
   --color-primary-soft: var(--primary-soft);
+  --color-primary-soft-foreground: var(--primary-soft-foreground);
   --color-secondary: var(--secondary);
   --color-warning: var(--warning);
   --color-accent: var(--accent);
+  --color-accent-strong: var(--accent-strong);
+  --color-eyebrow: var(--eyebrow);
+  --color-button-ink: var(--button-ink);
+
+  --color-banner-1: var(--banner-1);
+  --color-banner-2: var(--banner-2);
+  --color-banner-3: var(--banner-3);
+  --color-banner-4: var(--banner-4);
+  --color-headline-1: var(--headline-1);
+  --color-headline-2: var(--headline-2);
+  --color-headline-3: var(--headline-3);
+  --color-headline-4: var(--headline-4);
+  --color-wash-1: var(--wash-1);
+  --color-wash-2: var(--wash-2);
+  --color-wash-3: var(--wash-3);
+  --color-panel-1: var(--panel-1);
+  --color-panel-2: var(--panel-2);
 
   --color-excellent: var(--excellent);
   --color-recommended: var(--recommended);
@@ -67,6 +152,16 @@
   --color-low: var(--low);
   --color-danger: var(--danger);
   --color-info: var(--info);
+
+  --color-excellent-text: var(--excellent-text);
+  --color-recommended-text: var(--recommended-text);
+  --color-caution-text: var(--caution-text);
+  --color-low-text: var(--low-text);
+  --color-info-text: var(--info-text);
+
+  --color-scale-none: var(--scale-none);
+  --color-scale-possible: var(--scale-possible);
+  --color-danger-border: var(--danger-border);
 
   --color-ring: var(--ring);
 
@@ -76,6 +171,35 @@
   --radius-lg: var(--radius);
   --radius-md: calc(var(--radius) - 0.125rem);
   --radius-sm: calc(var(--radius) - 0.25rem);
+}
+
+@theme {
+  --shadow-card: 0 20px 40px -28px rgb(60 40 140 / 0.35);
+  --shadow-deep: 0 30px 60px -30px rgb(60 40 140 / 0.45);
+  --shadow-button: 0 14px 28px -10px rgb(99 102 241 / 0.6);
+  --shadow-button-hover: 0 18px 32px -10px rgb(99 102 241 / 0.7);
+  --shadow-button-press: 0 8px 16px -10px rgb(99 102 241 / 0.6);
+  --shadow-white: 0 8px 20px -12px rgb(60 40 120 / 0.35);
+  --shadow-up: 0 -8px 24px -16px rgb(60 40 140 / 0.25);
+}
+
+@utility bg-brand {
+  background-image: var(--gradient-brand);
+}
+@utility bg-banner {
+  background-image: var(--gradient-banner);
+}
+@utility bg-wash {
+  background-image: var(--gradient-wash);
+}
+@utility bg-panel {
+  background-image: var(--gradient-panel);
+}
+@utility text-gradient {
+  background-image: var(--gradient-headline);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 
 html {
@@ -98,10 +222,7 @@ h3 {
   letter-spacing: -0.02em;
 }
 
-/*
-  Background decoration: subtle, flat geometric tints only — never colorful
-  blurred gradients. Used behind hero / section blocks.
-*/
+/* Background decoration (to be reworked in Task 6). */
 .bg-soft {
   background-image: radial-gradient(
     60rem 40rem at 85% -10%,
@@ -134,7 +255,7 @@ h3 {
   background: #b6bcc6;
 }
 
-/* Flat skeleton: a plain gray block with a soft pulse (no shimmer gradient). */
+/* Skeleton: a pale lavender block with a soft pulse. */
 @keyframes pulse-soft {
   0%,
   100% {
@@ -145,6 +266,6 @@ h3 {
   }
 }
 .skeleton {
-  background: #e5e7eb;
+  background: var(--border);
   animation: pulse-soft 1.4s ease-in-out infinite;
 }

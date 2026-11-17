@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Outfit, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
-// Outfit — geometric sans that mirrors the flat, bold UI shapes (design.md).
+// Outfit — geometric sans that pairs with the rounded, gradient UI (design.md).
 const outfit = Outfit({
   variable: "--font-outfit",
   subsets: ["latin"],
