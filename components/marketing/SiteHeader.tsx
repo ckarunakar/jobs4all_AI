@@ -14,11 +14,14 @@ const RING =
 
 export function SiteHeader({ loggedIn }: { loggedIn: boolean }) {
   const pathname = usePathname();
-  // The pathname the menu was opened on. The menu counts as open only while
-  // the route is unchanged, so any navigation (logo, back/forward, links)
-  // closes it without an effect.
-  const [openedAt, setOpenedAt] = useState<string | null>(null);
-  const open = openedAt !== null && openedAt === pathname;
+  const [open, setOpen] = useState(false);
+  // Reset the menu on every route change (including back/forward and
+  // revisits) by adjusting state during render, not in an effect.
+  const [menuPath, setMenuPath] = useState(pathname);
+  if (pathname !== menuPath) {
+    setMenuPath(pathname);
+    setOpen(false);
+  }
   const menuButtonRef = useRef<HTMLButtonElement>(null);
 
   // Escape closes the panel and returns focus to the menu button. The state
@@ -27,7 +30,7 @@ export function SiteHeader({ loggedIn }: { loggedIn: boolean }) {
     if (!open) return;
     function onKeyDown(e: KeyboardEvent) {
       if (e.key === "Escape") {
-        setOpenedAt(null);
+        setOpen(false);
         menuButtonRef.current?.focus();
       }
     }
@@ -44,6 +47,7 @@ export function SiteHeader({ loggedIn }: { loggedIn: boolean }) {
         <Link
           href="/"
           aria-label="ITJobCafé home"
+          onClick={() => setOpen(false)}
           className={cn("inline-flex rounded-md", RING)}
         >
           <Logo height={52} preload />
@@ -80,7 +84,7 @@ export function SiteHeader({ loggedIn }: { loggedIn: boolean }) {
           type="button"
           aria-expanded={open}
           aria-controls="site-menu"
-          onClick={() => setOpenedAt(open ? null : pathname)}
+          onClick={() => setOpen((v) => !v)}
           className={cn(
             buttonVariants({ variant: "outline" }),
             "lg:hidden",
@@ -105,7 +109,7 @@ export function SiteHeader({ loggedIn }: { loggedIn: boolean }) {
                   <Link
                     href={href}
                     aria-current={active ? "page" : undefined}
-                    onClick={() => setOpenedAt(null)}
+                    onClick={() => setOpen(false)}
                     className={cn(
                       "block rounded-md py-3 text-base",
                       RING,
@@ -122,7 +126,7 @@ export function SiteHeader({ loggedIn }: { loggedIn: boolean }) {
           </ul>
           <Link
             href={ctaHref}
-            onClick={() => setOpenedAt(null)}
+            onClick={() => setOpen(false)}
             className={buttonVariants({ className: "mt-3 w-full" })}
           >
             {ctaLabel}
