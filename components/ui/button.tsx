@@ -16,7 +16,7 @@ const baseButtonVariants = cva(
         ghost: "text-accent hover:bg-elevated hover:text-accent-strong",
         danger:
           "border-[1.5px] border-danger-border bg-card text-danger shadow-white hover:border-danger",
-        link: "text-accent underline-offset-4 hover:underline h-auto p-0 shadow-none motion-safe:hover:translate-y-0",
+        link: "text-accent underline-offset-4 hover:underline shadow-none motion-safe:hover:translate-y-0",
       },
       size: {
         sm: "h-9 px-3.5 text-xs",
@@ -25,6 +25,8 @@ const baseButtonVariants = cva(
         icon: "size-11",
       },
     },
+    // Emitted after the size classes, so the link variant wins over h-11/px-5.
+    compoundVariants: [{ variant: "link", class: "h-auto p-0" }],
     defaultVariants: {
       variant: "primary",
       size: "md",
@@ -35,8 +37,9 @@ const baseButtonVariants = cva(
 type ButtonVariantProps = VariantProps<typeof baseButtonVariants>;
 
 /**
- * Merged with tailwind-merge so a variant's overrides (e.g. the link variant's
- * h-auto p-0) beat the size classes instead of racing them in the stylesheet.
+ * Merged with tailwind-merge so later classes (variant, size, and the link
+ * compound variant's h-auto p-0) deterministically beat earlier conflicting
+ * ones instead of racing in the stylesheet.
  */
 const buttonVariants = (
   props?: ButtonVariantProps & { className?: string },
