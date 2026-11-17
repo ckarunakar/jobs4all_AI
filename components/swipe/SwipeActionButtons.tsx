@@ -34,7 +34,7 @@ function RoundButton({
       onClick={onClick}
       disabled={disabled}
       className={cn(
-        "flex items-center justify-center rounded-full border-[1.5px] bg-card shadow-white transition-transform focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 motion-safe:hover:-translate-y-0.5 motion-safe:active:translate-y-px disabled:pointer-events-none disabled:opacity-40",
+        "flex items-center justify-center rounded-full border-[1.5px] bg-card shadow-white transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 motion-safe:hover:-translate-y-0.5 motion-safe:active:translate-y-px disabled:pointer-events-none disabled:opacity-40",
         className,
       )}
     >

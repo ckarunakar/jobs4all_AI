@@ -171,7 +171,7 @@ export function JobFilterButton() {
         <button
           type="button"
           onClick={openPanel}
-          className="rounded-full border border-primary/40 bg-primary-soft px-2.5 py-1 text-xs font-medium text-accent"
+          className="rounded-full border border-primary/40 bg-primary-soft px-2.5 py-1 text-xs font-medium text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
         >
           Preferences on
         </button>

@@ -20,7 +20,7 @@ export default function SupportPage() {
       <p className={LEGAL_P}>
         Sign in, open <strong>Settings</strong>, and choose{" "}
         <strong>Delete account</strong> — on the website at{" "}
-        <Link href="/settings" className="font-medium text-accent hover:underline">
+        <Link href="/settings" className="rounded-sm font-medium text-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
           itjobcafe.ai/settings
         </Link>{" "}
         or in the app&apos;s Settings tab. You&apos;ll be asked to confirm with
@@ -33,7 +33,7 @@ export default function SupportPage() {
       <h2 className={LEGAL_H2}>Privacy</h2>
       <p className={LEGAL_P}>
         See our{" "}
-        <Link href="/privacy" className="font-medium text-accent hover:underline">
+        <Link href="/privacy" className="rounded-sm font-medium text-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
           privacy policy
         </Link>{" "}
         for what we collect and how it&apos;s used.

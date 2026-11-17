@@ -34,7 +34,7 @@ export default async function LoginPage() {
           New here?{" "}
           <Link
             href="/signup"
-            className="font-medium text-accent hover:underline"
+            className="rounded-sm font-medium text-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
             Create an account
           </Link>

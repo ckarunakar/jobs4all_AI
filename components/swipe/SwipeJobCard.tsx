@@ -69,7 +69,7 @@ export function SwipeJobCard({ job, onDetails, dragHint }: SwipeJobCardProps) {
           {onDetails && (
             <button
               onClick={onDetails}
-              className="flex items-center gap-1 rounded-full border border-border-input bg-card px-2.5 py-1 text-xs text-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              className="flex items-center gap-1 rounded-full border border-border-input bg-card px-2.5 py-1 text-xs text-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             >
               <ChevronUp className="size-3.5" />
               Details
@@ -151,7 +151,7 @@ export function SwipeJobCard({ job, onDetails, dragHint }: SwipeJobCardProps) {
                   e.stopPropagation();
                   setDescExpanded((v) => !v);
                 }}
-                className="mt-1.5 text-xs font-semibold text-accent hover:underline"
+                className="mt-1.5 rounded-sm text-xs font-semibold text-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               >
                 {descExpanded ? "Read less" : "Read more"}
               </button>

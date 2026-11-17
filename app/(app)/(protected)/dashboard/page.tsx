@@ -116,7 +116,7 @@ export default function DashboardPage() {
             <CardTitle>Today&apos;s swipe activity</CardTitle>
             <Link
               href="/swipe"
-              className="flex items-center gap-1 text-xs font-medium text-accent hover:underline"
+              className="flex items-center gap-1 rounded-sm text-xs font-medium text-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             >
               Keep swiping
               <Sparkles className="size-3" />

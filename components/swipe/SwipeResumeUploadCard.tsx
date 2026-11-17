@@ -132,7 +132,7 @@ export function SwipeResumeUploadCard() {
         type="button"
         onClick={pickFile}
         disabled={uploading}
-        className="flex w-full flex-col items-center justify-center rounded-lg border border-dashed border-border-strong bg-surface/50 px-6 py-8 text-center transition-colors hover:border-primary/50 hover:bg-elevated disabled:cursor-not-allowed disabled:opacity-60"
+        className="flex w-full flex-col items-center justify-center rounded-lg border border-dashed border-border-strong bg-surface/50 px-6 py-8 text-center transition-colors hover:border-primary/50 hover:bg-elevated focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
       >
         <div className="flex size-11 items-center justify-center rounded-full bg-panel text-accent">
           {uploading ? (
