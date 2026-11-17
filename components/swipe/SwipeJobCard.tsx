@@ -8,7 +8,6 @@ import {
   DollarSign,
   MapPin,
   Radio,
-  Sparkles,
   ThumbsUp,
   X,
 } from "lucide-react";
@@ -44,8 +43,8 @@ export function SwipeJobCard({ job, onDetails, dragHint }: SwipeJobCardProps) {
   const [descExpanded, setDescExpanded] = useState(false);
 
   return (
-    <div className="relative flex min-h-[28rem] select-none flex-col overflow-hidden rounded-lg border-2 border-border-strong bg-card sm:min-h-[30rem]">
-      {/* Flat solid brand band (no gradients/shadows). */}
+    <div className="relative flex min-h-[28rem] select-none flex-col overflow-hidden rounded-3xl border border-border bg-card shadow-deep sm:min-h-[30rem]">
+      {/* Company color strip (job data). */}
       <div
         className="pointer-events-none absolute inset-x-0 top-0 h-2"
         style={{ backgroundColor: job.companyLogo }}
@@ -70,7 +69,7 @@ export function SwipeJobCard({ job, onDetails, dragHint }: SwipeJobCardProps) {
           {onDetails && (
             <button
               onClick={onDetails}
-              className="flex items-center gap-1 rounded-full border border-border bg-elevated px-2.5 py-1 text-xs text-muted hover:text-foreground"
+              className="flex items-center gap-1 rounded-full border border-border-input bg-card px-2.5 py-1 text-xs text-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             >
               <ChevronUp className="size-3.5" />
               Details
@@ -98,16 +97,15 @@ export function SwipeJobCard({ job, onDetails, dragHint }: SwipeJobCardProps) {
         </div>
 
         {/* Score */}
-        <div className="mt-4 rounded-2xl border border-border bg-surface p-4">
+        <div className="mt-4 rounded-2xl border border-border bg-panel p-4">
           <ScoreGate
             job={job}
             scored={
               ai ? (
                 <>
                   <div className="mb-1.5 flex items-center justify-end">
-                    <span className="flex items-center gap-1 text-[11px] font-medium text-accent">
-                      <Sparkles className="size-3" />
-                      AI scored
+                    <span className="flex items-center gap-1 text-[11px] font-bold tracking-[0.12em] text-accent">
+                      ✦ AI SCORED
                     </span>
                   </div>
                   <ScoreMeter score={ai.score} />
@@ -122,7 +120,7 @@ export function SwipeJobCard({ job, onDetails, dragHint }: SwipeJobCardProps) {
           <div className="mt-4 space-y-1.5">
             {strengths.slice(0, 3).map((s) => (
               <div key={s} className="flex items-start gap-2 text-sm">
-                <ThumbsUp className="mt-0.5 size-4 shrink-0 text-[var(--recommended)]" />
+                <ThumbsUp className="mt-0.5 size-4 shrink-0 text-recommended-text" />
                 <span className="text-muted">{s}</span>
               </div>
             ))}
@@ -153,7 +151,7 @@ export function SwipeJobCard({ job, onDetails, dragHint }: SwipeJobCardProps) {
                   e.stopPropagation();
                   setDescExpanded((v) => !v);
                 }}
-                className="mt-1.5 text-xs font-semibold text-accent hover:underline"
+                className="mt-1.5 rounded-sm text-xs font-semibold text-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               >
                 {descExpanded ? "Read less" : "Read more"}
               </button>
@@ -167,7 +165,7 @@ export function SwipeJobCard({ job, onDetails, dragHint }: SwipeJobCardProps) {
 
         {/* Caution / warning */}
         {warning && (
-          <div className="mt-3 flex items-start gap-2 text-sm text-[var(--caution)]">
+          <div className="mt-3 flex items-start gap-2 text-sm text-caution-text">
             <AlertTriangle className="mt-0.5 size-4 shrink-0" />
             <span>{warning}</span>
           </div>
@@ -203,10 +201,10 @@ function Stamp({
   return (
     <div
       className={cn(
-        "pointer-events-none absolute top-8 z-10 rotate-[-12deg] rounded-lg border-2 px-4 py-1.5 text-lg font-extrabold tracking-wider transition-opacity",
+        "pointer-events-none absolute top-8 z-10 rotate-[-12deg] rounded-xl border-[3px] bg-card/85 shadow-card px-4 py-1.5 text-lg font-extrabold tracking-wider transition-opacity",
         isInterested
-          ? "left-6 border-[var(--recommended)] text-[var(--recommended)] rotate-[-12deg]"
-          : "right-6 border-[var(--danger)] text-[var(--danger)] rotate-[12deg]",
+          ? "left-6 border-[var(--recommended)] text-recommended-text rotate-[-12deg]"
+          : "right-6 border-danger text-danger rotate-[12deg]",
         show ? "opacity-100" : "opacity-0",
       )}
     >

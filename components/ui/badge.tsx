@@ -3,23 +3,19 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils/cn";
 
 const badgeVariants = cva(
-  "inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium whitespace-nowrap",
+  "inline-flex items-center gap-1 rounded-full border border-transparent px-2.5 py-0.5 text-xs font-semibold whitespace-nowrap",
   {
     variants: {
       variant: {
-        default: "border-border bg-elevated text-muted",
-        outline: "border-border-strong text-muted",
-        primary: "border-primary/30 bg-primary-soft text-accent",
-        excellent:
-          "border-[var(--excellent)]/30 bg-[var(--excellent)]/10 text-[var(--excellent)]",
-        recommended:
-          "border-[var(--recommended)]/30 bg-[var(--recommended)]/10 text-[var(--recommended)]",
-        caution:
-          "border-[var(--caution)]/30 bg-[var(--caution)]/10 text-[var(--caution)]",
-        low: "border-[var(--low)]/30 bg-[var(--low)]/10 text-[var(--low)]",
-        danger:
-          "border-[var(--danger)]/30 bg-[var(--danger)]/10 text-[var(--danger)]",
-        info: "border-[var(--info)]/30 bg-[var(--info)]/10 text-[var(--info)]",
+        default: "bg-elevated text-muted",
+        outline: "border-border-input bg-card text-muted",
+        primary: "bg-panel text-primary-soft-foreground",
+        excellent: "bg-[var(--excellent)]/12 text-excellent-text",
+        recommended: "bg-[var(--recommended)]/12 text-recommended-text",
+        caution: "bg-[var(--caution)]/12 text-caution-text",
+        low: "bg-[var(--low)]/12 text-low-text",
+        danger: "bg-[var(--danger)]/10 text-danger",
+        info: "bg-[var(--info)]/12 text-info-text",
       },
     },
     defaultVariants: { variant: "default" },

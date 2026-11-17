@@ -50,7 +50,7 @@ export function Dialog({
   return createPortal(
     <div className="fixed inset-0 z-[60]">
       <div
-        className="absolute inset-0 bg-foreground/40"
+        className="absolute inset-0 bg-foreground/45"
         onClick={onClose}
         aria-hidden
       />
@@ -61,8 +61,8 @@ export function Dialog({
         className={cn(
           "absolute flex flex-col bg-card",
           side === "right"
-            ? "inset-y-0 right-0 w-full max-w-xl border-l-2 border-border-strong animate-[slideIn_0.2s_ease-out]"
-            : "left-1/2 top-1/2 max-h-[90dvh] w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-lg border-2 border-border-strong",
+            ? "inset-y-0 right-0 w-full max-w-xl border-l border-border shadow-deep animate-[slideIn_0.2s_ease-out]"
+            : "left-1/2 top-1/2 max-h-[90dvh] w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-3xl border border-border shadow-deep",
           className,
         )}
       >
@@ -80,7 +80,7 @@ export function Dialog({
             </div>
             <button
               onClick={onClose}
-              className="shrink-0 rounded-md p-1 text-muted hover:bg-elevated hover:text-foreground"
+              className="shrink-0 rounded-md p-1 text-muted hover:bg-elevated hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               aria-label="Close"
             >
               <X className="size-5" />

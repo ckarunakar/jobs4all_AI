@@ -1,24 +1,25 @@
-import { Coffee } from "lucide-react";
+import Image from "next/image";
 import { cn } from "@/lib/utils/cn";
 
-/** ITJobCafe wordmark + glyph. */
+/** ITJobCafé logo image. Callers wrap it in a link when needed. */
 export function Logo({
+  height = 52,
   className,
-  showWordmark = true,
+  preload = false,
 }: {
+  height?: number;
   className?: string;
-  showWordmark?: boolean;
+  preload?: boolean;
 }) {
   return (
-    <div className={cn("flex items-center gap-2.5", className)}>
-      <div className="flex size-8 items-center justify-center rounded-md bg-primary text-primary-foreground">
-        <Coffee className="size-[18px]" strokeWidth={2.5} />
-      </div>
-      {showWordmark && (
-        <span className="text-base font-bold tracking-tight">
-          ITJob<span className="text-primary">Cafe</span>
-        </span>
-      )}
-    </div>
+    <Image
+      src="/brand/itjobcafe-logo.png"
+      alt="ITJobCafé"
+      width={Math.round((height * 230) / 64)}
+      height={height}
+      preload={preload}
+      className={cn("w-auto", className)}
+      style={{ height }}
+    />
   );
 }

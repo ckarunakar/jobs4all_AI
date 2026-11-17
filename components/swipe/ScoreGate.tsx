@@ -13,7 +13,7 @@ import type { SwipeJob } from "@/types/swipe";
  *  - guest → blurred meter + "Log in to see AI ratings"
  *  - logged in, unscored → "Ask AI to score" (per-job, fills in place)
  *  - scored → the caller-provided `scored` content
- * Works without a SwipeStoreProvider (landing preview card) — treated as guest.
+ * Works without a SwipeStoreProvider — treated as guest.
  */
 export function ScoreGate({
   job,
@@ -70,7 +70,7 @@ export function ScoreGate({
         {busy ? "AI scoring…" : "Ask AI to score"}
       </Button>
       {error && (
-        <p className="text-xs text-[var(--caution)]">{error}</p>
+        <p className="text-xs text-caution-text">{error}</p>
       )}
     </div>
   );

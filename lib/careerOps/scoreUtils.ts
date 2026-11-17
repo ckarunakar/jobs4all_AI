@@ -37,52 +37,91 @@ export interface ScoreTierMeta {
  *   2.5–2.99  → Weak fit
  *   < 2.5     → Not recommended
  */
-export function getScoreTier(score: CareerOpsScore): ScoreTierMeta {
-  if (score >= 4.5) {
-    return {
-      tier: "excellent",
-      label: "Excellent fit",
-      token: "excellent",
-      description: "Strong alignment across the board — apply soon.",
-    };
-  }
-  if (score >= RECOMMEND_THRESHOLD) {
-    return {
-      tier: "recommended",
-      label: "Strong fit",
-      token: "recommended",
-      description: "Matches most important requirements — worth applying.",
-    };
-  }
-  if (score >= 3.5) {
-    return {
-      tier: "review",
-      label: "Good fit",
-      token: "caution",
-      description: "Some alignment, but review the gaps before spending time.",
-    };
-  }
-  if (score >= 3.0) {
-    return {
-      tier: "review",
-      label: "Possible fit",
-      token: "caution",
-      description: "You may be able to stretch — only apply if strategic.",
-    };
-  }
-  if (score >= 2.5) {
-    return {
-      tier: "low",
-      label: "Weak fit",
-      token: "low",
-      description: "Significant gaps — lower priority.",
-    };
-  }
-  return {
+export type ScoreBand =
+  | "excellent"
+  | "strong"
+  | "good"
+  | "possible"
+  | "weak"
+  | "not-recommended";
+
+export interface ScoreBandRow {
+  band: ScoreBand;
+  /** Inclusive lower cutoff for this band. */
+  min: number;
+  label: string;
+  shortLabel: string;
+  tier: ScoreTier;
+  token: ScoreTierMeta["token"];
+  description: string;
+}
+
+/** Score bands ordered high to low; the single source of truth for cutoffs and copy. */
+export const SCORE_BANDS: readonly ScoreBandRow[] = [
+  {
+    band: "excellent",
+    min: 4.5,
+    label: "Excellent fit",
+    shortLabel: "Excellent",
+    tier: "excellent",
+    token: "excellent",
+    description: "Strong alignment across the board — apply soon.",
+  },
+  {
+    band: "strong",
+    min: RECOMMEND_THRESHOLD,
+    label: "Strong fit",
+    shortLabel: "Strong",
+    tier: "recommended",
+    token: "recommended",
+    description: "Matches most important requirements — worth applying.",
+  },
+  {
+    band: "good",
+    min: 3.5,
+    label: "Good fit",
+    shortLabel: "Good",
+    tier: "review",
+    token: "caution",
+    description: "Some alignment, but review the gaps before spending time.",
+  },
+  {
+    band: "possible",
+    min: 3.0,
+    label: "Possible fit",
+    shortLabel: "Possible",
+    tier: "review",
+    token: "caution",
+    description: "You may be able to stretch — only apply if strategic.",
+  },
+  {
+    band: "weak",
+    min: 2.5,
+    label: "Weak fit",
+    shortLabel: "Weak",
     tier: "low",
+    token: "low",
+    description: "Significant gaps — lower priority.",
+  },
+  {
+    band: "not-recommended",
+    min: SCORE_MIN,
     label: "Not recommended",
+    shortLabel: "Not recommended",
+    tier: "low",
     token: "low",
     description: "Too little alignment to prioritize.",
+  },
+];
+
+export function getScoreTier(score: CareerOpsScore): ScoreTierMeta {
+  const row =
+    SCORE_BANDS.find((r) => score >= r.min) ?? SCORE_BANDS[SCORE_BANDS.length - 1];
+  return {
+    tier: row.tier,
+    label: row.label,
+    token: row.token,
+    description: row.description,
   };
 }
 
@@ -110,6 +149,11 @@ export function getScoreColorClass(score: CareerOpsScore): string {
 /** CSS variable name (e.g. "var(--excellent)") for a score's tier. */
 export function getScoreColorVar(score: CareerOpsScore): string {
   return `var(--${getScoreTier(score).token})`;
+}
+
+/** CSS variable name (e.g. "var(--excellent-text)") for the dark text shade of a score's tier. */
+export function getScoreTextColorVar(score: CareerOpsScore): string {
+  return `var(--${getScoreTier(score).token}-text)`;
 }
 
 /** Recommended next action copy for a score. */

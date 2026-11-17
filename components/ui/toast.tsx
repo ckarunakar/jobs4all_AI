@@ -25,10 +25,10 @@ interface ToastApi {
 const ToastContext = createContext<ToastApi | null>(null);
 
 const TONE_STYLES: Record<ToastTone, string> = {
-  default: "bg-foreground text-background",
-  success: "bg-[var(--recommended)] text-white",
+  default: "bg-foreground text-white",
+  success: "bg-recommended-text text-white",
   warning: "bg-[var(--caution)] text-foreground",
-  danger: "bg-[var(--danger)] text-white",
+  danger: "bg-danger text-white",
 };
 
 export function ToastProvider({ children }: { children: React.ReactNode }) {
@@ -56,7 +56,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
               exit={{ opacity: 0, scale: 0.95 }}
               transition={{ duration: 0.18 }}
               className={cn(
-                "pointer-events-auto rounded-full px-4 py-2 text-sm font-semibold",
+                "pointer-events-auto rounded-full px-4 py-2 text-sm font-semibold shadow-card",
                 TONE_STYLES[t.tone],
               )}
             >

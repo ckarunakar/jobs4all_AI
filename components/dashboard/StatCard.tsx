@@ -12,13 +12,14 @@ interface StatCardProps {
   className?: string;
 }
 
-// Solid color-block icon chips for the bold, flat "poster" feel.
+// Soft tinted icon chips: the primary chip sits on the panel wash, the rest use
+// a 12% tint of their accent with the AA-safe text shade.
 const ACCENT_STYLES: Record<NonNullable<StatCardProps["accent"]>, string> = {
-  primary: "bg-primary text-white",
-  excellent: "bg-[var(--excellent)] text-white",
-  recommended: "bg-[var(--recommended)] text-white",
-  caution: "bg-[var(--caution)] text-white",
-  info: "bg-[var(--info)] text-white",
+  primary: "bg-panel text-accent",
+  excellent: "bg-[var(--excellent)]/12 text-excellent-text",
+  recommended: "bg-[var(--recommended)]/12 text-recommended-text",
+  caution: "bg-[var(--caution)]/12 text-caution-text",
+  info: "bg-[var(--info)]/12 text-info-text",
 };
 
 export function StatCard({
@@ -41,7 +42,7 @@ export function StatCard({
         </div>
         <div
           className={cn(
-            "flex size-10 shrink-0 items-center justify-center rounded-md",
+            "flex size-10 shrink-0 items-center justify-center rounded-xl",
             ACCENT_STYLES[accent],
           )}
         >

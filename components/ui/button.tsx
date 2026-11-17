@@ -2,27 +2,31 @@ import * as React from "react";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils/cn";
 
-const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-semibold transition-all duration-200 hover:scale-[1.03] active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-50 disabled:hover:scale-100 [&_svg]:size-4 [&_svg]:shrink-0",
+const baseButtonVariants = cva(
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-semibold transition-[transform,box-shadow,filter,border-color,color] duration-200 motion-safe:hover:-translate-y-px motion-safe:active:translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-45 disabled:shadow-none [&_svg]:size-4 [&_svg]:shrink-0",
   {
     variants: {
       variant: {
-        primary: "bg-primary text-primary-foreground hover:bg-blue-600",
-        secondary: "bg-elevated text-foreground hover:bg-border",
+        primary:
+          "bg-brand text-primary-foreground font-bold shadow-button hover:shadow-button-hover hover:brightness-110 active:shadow-button-press",
+        secondary:
+          "border-[1.5px] border-border-input bg-card text-button-ink shadow-white hover:border-border-strong",
         outline:
-          "border-2 border-primary text-primary hover:bg-primary hover:text-primary-foreground",
-        ghost: "text-muted hover:bg-elevated hover:text-foreground",
+          "border-[1.5px] border-border-input bg-card text-button-ink shadow-white hover:border-border-strong",
+        ghost: "text-accent hover:bg-elevated hover:text-accent-strong",
         danger:
-          "border-2 border-[var(--danger)] text-[var(--danger)] hover:bg-[var(--danger)] hover:text-white",
-        link: "text-accent underline-offset-4 hover:underline p-0 h-auto hover:scale-100",
+          "border-[1.5px] border-danger-border bg-card text-danger shadow-white hover:border-danger",
+        link: "text-accent underline-offset-4 hover:underline shadow-none motion-safe:hover:translate-y-0",
       },
       size: {
-        sm: "h-9 px-3 text-xs",
+        sm: "h-9 px-3.5 text-xs",
         md: "h-11 px-5",
-        lg: "h-14 px-7 text-base",
-        icon: "h-11 w-11",
+        lg: "h-14 px-7 text-base rounded-lg",
+        icon: "size-11",
       },
     },
+    // Emitted after the size classes, so the link variant wins over h-11/px-5.
+    compoundVariants: [{ variant: "link", class: "h-auto p-0" }],
     defaultVariants: {
       variant: "primary",
       size: "md",
@@ -30,9 +34,23 @@ const buttonVariants = cva(
   },
 );
 
+type ButtonVariantProps = VariantProps<typeof baseButtonVariants>;
+
+/**
+ * Merged with tailwind-merge so later classes (variant, size, and the link
+ * compound variant's h-auto p-0) deterministically beat earlier conflicting
+ * ones instead of racing in the stylesheet.
+ */
+const buttonVariants = (
+  props?: ButtonVariantProps & { className?: string },
+) => {
+  const { className, ...variants } = props ?? {};
+  return cn(baseButtonVariants(variants), className);
+};
+
 export interface ButtonProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement>,
-    VariantProps<typeof buttonVariants> {}
+    ButtonVariantProps {}
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant, size, ...props }, ref) => (

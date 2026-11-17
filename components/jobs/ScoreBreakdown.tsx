@@ -1,4 +1,8 @@
-import { getScoreTier, scoreFraction } from "@/lib/careerOps/scoreUtils";
+import {
+  getScoreColorVar,
+  getScoreTextColorVar,
+  scoreFraction,
+} from "@/lib/careerOps/scoreUtils";
 import type { CareerOpsScoreBreakdown } from "@/lib/careerOps/types";
 
 /** Renders the Career-Ops per-block sub-scores as labelled bars. */
@@ -10,8 +14,7 @@ export function ScoreBreakdown({
   return (
     <div className="space-y-3.5">
       {breakdown.items.map((item) => {
-        const tier = getScoreTier(item.score);
-        const color = `var(--${tier.token})`;
+        const color = getScoreTextColorVar(item.score);
         return (
           <div key={item.key}>
             <div className="flex items-baseline justify-between gap-2 text-sm">
@@ -28,7 +31,7 @@ export function ScoreBreakdown({
                 className="h-full rounded-full transition-all"
                 style={{
                   width: `${scoreFraction(item.score) * 100}%`,
-                  backgroundColor: color,
+                  backgroundImage: `linear-gradient(90deg, ${getScoreColorVar(item.score)}, ${getScoreTextColorVar(item.score)})`,
                 }}
               />
             </div>

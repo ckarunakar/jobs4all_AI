@@ -1,136 +1,64 @@
-<role>
-Your goal is to help the user integrate a design system into an existing codebase in a way that is visually consistent, maintainable, and idiomatic to their tech stack.
+# ITJobCafé Style Guide
 
-Before proposing or writing any code, first build a clear mental model of the current system:
-- Identify the tech stack (e.g. React, Next.js, Vue, Tailwind, shadcn/ui, etc.).
-- Understand the existing design tokens (colors, spacing, typography, radii, shadows), global styles, and utility patterns.
-- Review the current component architecture (atoms/molecules/organisms, layout primitives, etc.) and naming conventions.
-- Note any constraints (legacy CSS, design library in use, performance or bundle-size considerations).
+Light, soft-gradient design. Tokens live in `app/globals.css`; components use tokens and
+utilities, never hex literals (exceptions: company brand colors, the Google logo, and art
+under `components/marketing/**` and `app/(marketing)/**`).
 
-Ask the user focused questions to understand the user's goals. Do they want:
-- a specific component or page redesigned in the new style,
-- existing components refactored to the new system, or
-- new pages/features built entirely in the new style?
+## Principles
+1. **Soft depth**: tinted shadows and gradients add warmth. Shadows are low and wide, never gray or harsh.
+2. **Blue to violet**: the brand runs `primary` (blue) into `primary-end` (violet); the banner and headline gradients extend it toward pink.
+3. **Hairlines over blocks**: cards and sections are white with a 1px lavender border.
+4. **Readable first**: all text passes WCAG AA (4.5:1; 3:1 for 24px+ or 18.66px+ bold). Gradient text is for large headlines only.
+5. **Round and friendly**: `--radius` is 0.875rem (`rounded-lg` 14px, `rounded-md` 12px, `rounded-sm` 10px). Cards go to 20-24px.
+6. **Calm motion**: small lifts, never scaling.
 
-Once you understand the context and scope, do the following:
-- Propose a concise implementation plan that follows best practices, prioritizing:
-  - centralizing design tokens,
-  - reusability and composability of components,
-  - minimizing duplication and one-off styles,
-  - long-term maintainability and clear naming.
-- When writing code, match the user’s existing patterns (folder structure, naming, styling approach, and component patterns).
-- Explain your reasoning briefly as you go, so the user understands *why* you’re making certain architectural or design choices.
+## Tokens (`:root`)
+| Group | Tokens |
+|---|---|
+| Surfaces | `background` #fff, `surface` #f7f5fd, `card` #fff, `card-hover` #faf8ff, `elevated` #f4f2fb |
+| Borders | `border` #ece7f7 (cards, sections), `border-input` #e6e1f5 (inputs, white buttons), `border-strong` #c9bff0 (hover) |
+| Text | `foreground` #141a3a, `muted` #4b5268 (body), `muted-foreground` #636a82 (secondary) |
+| Brand | `primary` #2563eb, `primary-end` #7c3aed, `primary-soft` #eef2ff + `primary-soft-foreground` #3730a3, `accent` #4c3fc4 (links), `accent-strong` #5b45d6 (active/hover), `eyebrow` #6b46c1, `button-ink` #2e2a6b |
+| Danger | `danger` #c0392b, `danger-border` #f3c7c7 |
+| Focus | `ring` #5b45d6 |
+| Stops | `banner-1..4`, `headline-1..4`, `wash-1..3`, `panel-1..2` |
 
-Always aim to:
-- Preserve or improve accessibility.
-- Maintain visual consistency with the provided design system.
-- Leave the codebase in a cleaner, more coherent state than you found it.
-- Ensure layouts are responsive and usable across devices.
-- Make deliberate, creative design choices (layout, motion, interaction details, and typography) that express the design system’s personality instead of producing a generic or boilerplate UI.
+Every color has a `--color-*` mapping, so `text-accent-strong`, `bg-elevated`, `border-border-input` etc. work.
 
-</role>
+## Gradients
+| Utility | Built from | Use |
+|---|---|---|
+| `bg-brand` | 90deg primary to primary-end | Primary buttons, active accents |
+| `bg-banner` | 90deg banner-1..4 (0/32/66/100%) | Top banner; white bold text |
+| `text-gradient` | 90deg headline-1..4 (0/42/74/100%) | Large headline words only |
+| `bg-wash` | 115deg wash-1..3 (0/45/100%) | Hero and app page background |
+| `bg-panel` | 120deg panel-1 to panel-2 | Feature panels, callouts |
 
-<design-system>
-# Design Philosophy
-**Flat Design** removes all artifice. It rejects the illusion of three-dimensionality—no drop shadows, no bevels, no realistic gradients, no textures. It relies entirely on **hierarchy through size, color, and typography**. This is not minimalism for the sake of being minimal; it's **confident reduction** that creates visual interest through pure form.
+`banner-1` is tuned darker than the mockup so white text passes 3:1. Headline stops are checked against the wash. `bg-banner` stops only pass 3:1, so white text on it must be at least 18.66px bold (or 24px+).
 
-The aesthetic is **digital-native but print-inspired**: crisp edges, solid blocks of color, and a strict reliance on the grid. It communicates clarity, efficiency, and modernity. It is not "boring" or "plain"; it is **boldly reductive and graphic**. Every element exists because it is necessary. Visual interest comes from the strategic interplay of solid shapes, vibrant (but controlled) color palettes, and dynamic scale.
+## Shadows
+`shadow-card` (cards), `shadow-deep` (hero art, dialogs), `shadow-button` / `-hover` / `-press` (gradient buttons), `shadow-white` (white buttons), `shadow-up` (sticky bottom bars).
 
-**Core Principles:**
-1.  **Zero Artificial Depth**: The Z-axis does not exist. Everything is on the same plane. However, visual hierarchy is created through scale, color contrast, and strategic layering of flat shapes.
-2.  **Color as Structure**: Bold background colors define sections and grouping, not lines or shadows. Color transitions are sharp, never blurred or gradual.
-3.  **Typography as Interface**: Text size and weight bear the load of hierarchy. Typography is geometric, bold, and demands attention.
-4.  **Geometric Purity**: Rectangles, circles, and squares dominate. Rounded corners are consistent and moderate. No organic blobs or complex shapes.
-5.  **Interactive Feedback**: Hover states are pronounced through color shifts, scale transformations, and instant transitions—never through shadow depth.
-6.  **Strategic Decoration**: Large, subtle geometric shapes in background create visual interest without breaking the flat aesthetic—think poster design.
+## Components
+- **Buttons**: primary is `bg-brand`, white bold text, `shadow-button`; hover lifts 1px, brighter, `shadow-button-hover`; press sinks 1px with `shadow-button-press`; disabled is 45% opacity, no shadow. Secondary/outline is white with a 1.5px `border-input`, `text-button-ink`, `shadow-white`; hover lifts and uses `border-strong`. Danger is white with `danger-border` and `text-danger`. Ghost/link is `text-accent`, no fill. A link styled as a button is `<Link className={buttonVariants(...)}>`.
+- **Cards**: white, 20-24px radius, 1px `border`, `shadow-card`.
+- **Pills/tags**: fully rounded; `bg-primary-soft text-primary-soft-foreground`, or `bg-elevated text-muted`.
+- **Inputs**: white, 1.5px `border-input`, rounded-md; focus shows the ring.
+- **Dialogs**: large radius, soft navy backdrop, `shadow-deep`.
+- **Skeleton**: pale lavender (`--border`) with a soft pulse.
+- **Focus**: every interactive element uses `focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2`.
 
-# Design Token System
+## Score colors
+Fills (`excellent`, `recommended`, `caution`, `low`, `info`) are for bars, rings and tints. Score *text* uses the `-text` shades (`excellent-text`, `recommended-text`, `caution-text`, `low-text`, `info-text`), which pass AA. In code, `getScoreTextColorVar(score)` returns the right `var(--*-text)`. Score meter bars are a short light-to-dark gradient inside the tier color on a white or tinted track. `scale-none` and `scale-possible` color the How It Works score-scale segments.
 
-## Colors (Single Palette: Light Mode)
-A vibrant, confident palette that avoids muddy tones. High contrast is essential.
+## Logo
+The logo PNG has an opaque white background. On white it is invisible; on tinted or gradient surfaces (the wash, tinted hero bands) add `mix-blend-mode: multiply` (`mix-blend-multiply`) so the white drops out. Don't edit the file.
 
--   **Background**: `#FFFFFF` (Pure White) - The canvas.
--   **Foreground**: `#111827` (Gray 900) - Sharp, high-contrast text.
--   **Primary**: `#3B82F6` (Blue 500) - The "Action" color. Bright, standard digital blue.
--   **Secondary**: `#10B981` (Emerald 500) - Supporting accent.
--   **Accent**: `#F59E0B` (Amber 500) - For highlights/badges.
--   **Muted**: `#F3F4F6` (Gray 100) - Used for secondary backgrounds/blocks.
--   **Border**: `#E5E7EB` (Gray 200) - Used sparingly.
+## Motion
+Every hover or press movement is prefixed `motion-safe:` (e.g. `motion-safe:hover:-translate-y-px`). Never use `hover:scale-*` or `active:scale-*`.
 
-## Typography
-**Font Family**: **'Outfit', sans-serif**.
-A geometric sans-serif that mirrors the shapes of the UI.
--   **Headings**: Bold (700) or Extra Bold (800). Tight letter-spacing (`-0.02em`).
--   **Body**: Regular (400). Readable, standard spacing.
--   **Labels/Buttons**: Medium (500) or SemiBold (600). Uppercase often used for labels (`tracking-wider`).
+## tailwind-merge
+`cn`/`buttonVariants` merge classes, grouping the custom utilities by prefix: `bg-brand`/`bg-panel`/`bg-wash` count as background colours, `text-gradient` as a text colour, and `shadow-card`/`shadow-white`/... as shadow colours. So `cn("shadow-white", "shadow-none")` keeps both; override with care. Plain template strings don't merge at all.
 
-## Radius & Shapes
--   **Radius**: `rounded-md` (6px) or `rounded-lg` (8px). Consistent throughout. Not fully rounded (pill) unless it's a tag.
--   **Borders**: generally `0px`. We use background colors to define edges. If a border is needed (e.g., inputs), `border-2` solid color.
-
-## Shadows & Effects
--   **Shadows**: `shadow-none`. **ABSOLUTELY NO BOX SHADOWS ON ELEMENTS.**
--   **Gradients**: Only subtle directional gradients for background decoration (e.g., `from-[#F3F4F6] to-transparent`). Never on buttons or cards. Never colorful or vibrant gradients.
--   **Blur**: None on elements. No backdrop-blur effects.
--   **Background Decoration**: Large geometric shapes with low opacity (`bg-white/5`) positioned absolutely for visual interest.
-
-# Component Stylings
-
-## Buttons
--   **Primary**: Solid Primary color background. White text. `rounded-md`. Height `h-14` to `h-16` for good touch targets. `transition-all duration-200 hover:scale-105` (scale transformation for feedback). Color shift on hover (e.g., `hover:bg-blue-600`). No shadow.
--   **Secondary**: Solid Muted background (Gray 100). Dark text. `hover:bg-gray-200` with scale effect.
--   **Outline**: `border-4` solid color (not border-2 for more boldness). Text matches border color. Transparent bg. `hover:bg-[color] hover:text-white` (fill effect on hover).
-
-## Cards
--   **Style**: "Color Block".
--   **Appearance**: Solid background color (White on Gray page, or soft color tints like `bg-blue-50`, `bg-green-50` for features). No shadow. No border. Padding is generous (`p-6` or `p-8`). Rounded corners `rounded-lg`.
--   **Interaction**: `group cursor-pointer transition-all duration-200 hover:scale-[1.02]` (subtle scale). For colored backgrounds, add `hover:bg-[color]-100` for intensification. Icons within cards can have `group-hover:scale-110`.
-
-## Inputs
--   **Normal**: Gray 100 background (`bg-gray-100`). No border. Text Gray 900. `rounded-md`.
--   **Focus**: White background. `border-2` solid Primary. No focus ring glow, just the hard border.
-
-## Section Stylings
--   **Alternating Backgrounds**: Use White vs. Gray 100 (`#F3F4F6`) vs. Bold accent colors (Primary Blue, Emerald, Amber) to distinguish page sections. Sharp color transitions between sections.
--   **Dividers**: No thin line dividers between sections. Use whitespace or color blocks. Exception: FAQ uses thick `border-2` between items for structure.
--   **Background Decoration**: Use `absolute` positioned geometric shapes with low opacity or subtle gradients for visual interest. Examples: large circles (`rounded-full`), rotated squares, gradient overlays (`from-[color] to-transparent`).
-
-# Iconography
--   **Library**: `lucide-react`.
--   **Style**: Standard to bold stroke (2px to 2.5px for emphasis).
--   **Treatment**: Often placed inside a solid colored circle (white circle with colored icon like `bg-white text-blue-600`). Circle size `h-14 w-14` or `h-16 w-16`.
--   **Animation**: `transition-transform duration-200 group-hover:scale-110` for icons within cards. Simple color intensity shifts on hover.
-
-# Layout & Spacing
--   **Container**: `max-w-7xl`.
--   **Grid**: Rigid. 12-column base. Elements align perfectly.
--   **Spacing**: Comfortable but structured. Multiples of 4 (Tailwind default).
--   **Density**: Medium. Not too airy, not too dense. "Functional".
-
-# Motion
--   **Vibe**: "Digital", "Snappy", "Direct".
--   **Transitions**: `transition-all duration-200` for most interactions. `duration-300` for larger transformations.
--   **Hover**: Immediate visual feedback through:
-     - Scale transformations (`hover:scale-105` for buttons, `hover:scale-[1.02]` for cards)
-     - Color shifts (darkening or lightening)
-     - Color fills (outline buttons filling with color)
-     - Icon scaling within cards (`group-hover:scale-110`)
-
-# Accessibility
--   **Focus Rings**: Since we have no shadows, focus states must use high-contrast `ring-2 ring-offset-2 ring-blue-500` or similar solid outlines.
--   **Contrast**: Text on colored backgrounds must pass WCAG AA (e.g., White text on Blue 500 is okay, but check carefully with lighter accents).
-
-# Non-Genericness / "The Bold Factor"
--   **Avoid**: "Material Design" floating cards, generic Bootstrap layouts, subtle pastels everywhere.
--   **Emphasize**: The "Poster" look. Treat every section like a flat graphic poster with bold color blocking.
--   **Bold Choices Implemented**:
-     - **Large decorative geometric shapes** in hero background (circles, rotated squares with low opacity)
-     - **Vibrant full-section color blocks** (Blue hero, Emerald benefits, Amber CTA, Dark gray How It Works & Footer)
-     - **Dramatic scale effects** on pricing cards (popular tier starts larger and scales more)
-     - **Multi-color stat numbers** (each stat uses a different accent color)
-     - **Abstract geometric compositions** (overlapping shapes in hero illustration and benefits section)
-     - **Pronounced hover states** (scale, color intensification, fills)
-     - **Bold typography** with tight leading and strong weight contrast
-     - **Thick borders** (border-4 on outline buttons, border-2 on FAQ items)
--   **Visual Interest Without Depth**: Achieved through color contrast, geometric layering, and scale—never shadows or gradients.
-</design-system>
+## Contrast test
+`lib/design/contrast.test.ts` reads the hex tokens from `:root` and checks: text tokens on every light surface (4.5:1), white on gradient buttons, danger and success (4.5:1), badge text on its 12% tint (4.5:1), and banner/headline stops for large text (3:1). Change a color token and run `node --test "lib/**/*.test.ts"`. Keep gradient stops and text tokens as 6-digit hex so the test can read them.

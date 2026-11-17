@@ -29,10 +29,10 @@ function Checkbox({
       disabled={disabled}
       onClick={() => onCheckedChange?.(!checked)}
       className={cn(
-        "flex size-5 shrink-0 items-center justify-center rounded-[6px] border-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)] focus-visible:ring-offset-2 disabled:opacity-50",
+        "flex size-5 shrink-0 items-center justify-center rounded-[6px] border-[1.5px] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50",
         checked
-          ? "border-primary bg-primary text-primary-foreground"
-          : "border-border-strong bg-background hover:border-primary",
+          ? "border-transparent bg-brand text-white"
+          : "border-border-strong bg-card hover:border-primary",
         className,
       )}
     >

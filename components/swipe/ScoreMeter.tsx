@@ -2,6 +2,7 @@ import { Sparkles } from "lucide-react";
 import {
   formatScore,
   getScoreColorVar,
+  getScoreTextColorVar,
   getScoreLabel,
   isRecommended,
   scoreFraction,
@@ -17,7 +18,7 @@ export function ScoreMeter({
   score: CareerOpsScore;
   className?: string;
 }) {
-  const color = getScoreColorVar(score);
+  const color = getScoreTextColorVar(score);
   return (
     <div className={cn("w-full", className)}>
       <div className="flex items-end justify-between">
@@ -39,12 +40,12 @@ export function ScoreMeter({
           <span className="text-xs text-muted-foreground">/ 5.0</span>
         </div>
       </div>
-      <div className="mt-2 h-2.5 overflow-hidden rounded-full bg-elevated">
+      <div className="mt-2 h-2.5 overflow-hidden rounded-full bg-card/80">
         <div
           className="h-full rounded-full transition-all"
           style={{
             width: `${scoreFraction(score) * 100}%`,
-            backgroundColor: color,
+            backgroundImage: `linear-gradient(90deg, ${getScoreColorVar(score)}, ${getScoreTextColorVar(score)})`,
           }}
         />
       </div>

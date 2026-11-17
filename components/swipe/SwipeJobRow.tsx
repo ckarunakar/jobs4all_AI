@@ -21,7 +21,7 @@ export function SwipeJobRow({
   return (
     <button
       onClick={() => onClick(job)}
-      className="group flex w-full items-center gap-3 rounded-lg border border-border bg-surface px-3 py-2.5 text-left transition-colors hover:border-border-strong hover:bg-card-hover"
+      className="group flex w-full items-center gap-3 rounded-lg border border-border bg-surface px-3 py-2.5 text-left transition-colors hover:border-border-strong hover:bg-card-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
     >
       <CompanyLogo company={job.company} color={job.companyLogo} size={36} />
       <div className="min-w-0 flex-1">
@@ -36,7 +36,7 @@ export function SwipeJobRow({
         </Badge>
       )}
       <ScoreBadge score={swipeJobScore(job)} />
-      <ChevronRight className="size-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+      <ChevronRight className="size-4 text-muted-foreground transition-transform group-hover:motion-safe:translate-x-0.5" />
     </button>
   );
 }

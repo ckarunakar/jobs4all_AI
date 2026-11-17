@@ -116,14 +116,14 @@ export default function DashboardPage() {
             <CardTitle>Today&apos;s swipe activity</CardTitle>
             <Link
               href="/swipe"
-              className="flex items-center gap-1 text-xs font-medium text-accent hover:underline"
+              className="flex items-center gap-1 rounded-sm text-xs font-medium text-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             >
               Keep swiping
               <Sparkles className="size-3" />
             </Link>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center justify-around rounded-lg border border-border bg-surface py-4 text-center">
+            <div className="flex items-center justify-around rounded-lg border border-border bg-panel py-4 text-center">
               <Activity label="Interested" value={metrics.interested} />
               <Activity label="Saved" value={metrics.saved} />
               <Activity label="Skipped" value={metrics.skipped} />

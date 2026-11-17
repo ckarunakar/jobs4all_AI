@@ -32,7 +32,7 @@ export function ProfileCompletionCard() {
           </div>
           <div className="mt-2 h-2 overflow-hidden rounded-full bg-elevated">
             <div
-              className="h-full rounded-full bg-primary transition-all"
+              className="h-full rounded-full bg-brand transition-all"
               style={{ width: `${percent}%` }}
             />
           </div>
@@ -41,7 +41,7 @@ export function ProfileCompletionCard() {
           {fields.map((f) => (
             <li key={f.label} className="flex items-center gap-2 text-xs">
               {f.done ? (
-                <Check className="size-3.5 text-[var(--recommended)]" />
+                <Check className="size-3.5 text-recommended-text" />
               ) : (
                 <Circle className="size-3.5 text-muted-foreground" />
               )}

@@ -12,10 +12,12 @@ export default async function SignupPage() {
   if (session?.user) redirect("/swipe");
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center bg-background px-4 py-10">
+    <main className="flex min-h-screen flex-col items-center justify-center bg-wash px-4 py-10">
       <div className="w-full max-w-sm">
         <div className="mb-6 flex flex-col items-center text-center">
-          <Logo />
+          <Link href="/" aria-label="ITJobCafé home" className="inline-flex rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+            <Logo height={44} className="mix-blend-multiply" />
+          </Link>
           <h1 className="mt-4 text-2xl font-bold tracking-tight">
             Create your account
           </h1>
@@ -24,7 +26,7 @@ export default async function SignupPage() {
           </p>
         </div>
 
-        <div className="rounded-lg border-2 border-border bg-card p-5">
+        <div className="rounded-3xl border border-border bg-card p-6 shadow-card">
           <SignupForm />
         </div>
 
@@ -32,7 +34,7 @@ export default async function SignupPage() {
           Already have an account?{" "}
           <Link
             href="/login"
-            className="font-medium text-accent hover:underline"
+            className="rounded-sm font-medium text-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
             Log in
           </Link>
