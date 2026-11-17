@@ -55,6 +55,7 @@ export default function FaqPage() {
     <section className="bg-wash">
       <PageHero
         eyebrow="FAQ"
+        className="max-w-[860px]"
         title={
           <>
             Questions, <GradientText>answered.</GradientText>

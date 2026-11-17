@@ -30,10 +30,12 @@ export function PageHero({
   eyebrow,
   title,
   children,
+  className,
 }: {
   eyebrow: string;
   title: React.ReactNode;
   children?: React.ReactNode;
+  className?: string;
 }) {
   return (
     <section className="relative overflow-hidden bg-wash">
@@ -41,7 +43,12 @@ export function PageHero({
         aria-hidden="true"
         className="absolute right-[8%] top-[30px] size-[150px] rotate-[18deg] rounded-[42%] bg-[rgba(244,212,228,0.6)]"
       />
-      <div className="relative mx-auto max-w-[1240px] px-5 pb-12 pt-12 sm:px-8 sm:pb-16 sm:pt-14">
+      <div
+        className={cn(
+          "relative mx-auto max-w-[1240px] px-5 pb-12 pt-12 sm:px-8 sm:pb-16 sm:pt-14",
+          className,
+        )}
+      >
         <Eyebrow>
           <span aria-hidden="true">✦</span> {eyebrow}
         </Eyebrow>
