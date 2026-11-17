@@ -16,9 +16,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "ITJobCafe — Swipe through high-fit tech jobs",
+  title: "ITJobCafé — Know your job matching score",
   description:
-    "AI-ranked job search for students and new grads. Career-Ops-style fit scoring with human-confirmed applications. You review. You decide. You apply.",
+    "Upload your résumé once. Discover your best-fit tech jobs, see why each role fits, and build your career with confidence.",
 };
 
 export default function RootLayout({
