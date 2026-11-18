@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mergeSuggestions, fillToastMessage } from "./applySuggestions.ts";
+import { mergeSuggestions, fillToastMessage, foundNoTech, NO_TECH_FOUND_MESSAGE } from "./applySuggestions.ts";
 
 const S = { targetRoles: ["Software Engineer", "Frontend Developer"], techStack: ["React", "TypeScript", "Node.js"] };
 
@@ -27,4 +27,18 @@ test("toast text matches the spec", () => {
   assert.equal(fillToastMessage(2, 0), "We filled in your target roles from your résumé. You can edit them on your Profile.");
   assert.equal(fillToastMessage(0, 3), "We filled in your skills from your résumé. You can edit them on your Profile.");
   assert.equal(fillToastMessage(0, 0), null);
+});
+
+test("foundNoTech is true only when the AI answered with no roles and no tech", () => {
+  assert.equal(foundNoTech({ targetRoles: [], techStack: [] }), true);
+  // The AI didn't run, failed or timed out: no claim about the résumé.
+  assert.equal(foundNoTech(null), false);
+  assert.equal(foundNoTech(undefined), false);
+  assert.equal(foundNoTech({ targetRoles: ["Data Analyst"], techStack: [] }), false);
+  assert.equal(foundNoTech({ targetRoles: [], techStack: ["SQL"] }), false);
+});
+
+test("no-tech toast text", () => {
+  assert.equal(NO_TECH_FOUND_MESSAGE,
+    "Resume uploaded, but we couldn't find any tech roles or skills in it. You can add them on your Profile to narrow your feed.");
 });

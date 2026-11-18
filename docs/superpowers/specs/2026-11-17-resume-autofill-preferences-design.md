@@ -264,6 +264,11 @@ Server-only.
      Profile."
 3. If nothing was filled because the user already had preferences, there's no extra toast;
    the existing upload success message is enough.
+4. If the AI answered with no roles and no tech at all (a non-tech résumé), the upload
+   shows a warning toast instead of the plain success message: "Resume uploaded, but we
+   couldn't find any tech roles or skills in it. You can add them on your Profile to narrow
+   your feed." This case was added after the user's testing. It doesn't apply when the AI
+   didn't run, failed or timed out; those uploads keep the plain success message.
 
 **The swipe feed must reload with the new preference params,** without editing
 `lib/swipe/swipeStore.tsx`. That file is the merge-conflict hot spot with

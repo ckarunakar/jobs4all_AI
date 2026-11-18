@@ -34,3 +34,14 @@ export function fillToastMessage(filledRoles: number, filledTech: number): strin
   if (filledTech > 0) return `We filled in your skills ${tail}`;
   return null;
 }
+
+export const NO_TECH_FOUND_MESSAGE =
+  "Resume uploaded, but we couldn't find any tech roles or skills in it. You can add them on your Profile to narrow your feed.";
+
+/**
+ * True when the AI answered and found no tech roles or skills at all. A null or
+ * missing answer (AI off, failed or timed out) says nothing about the résumé.
+ */
+export function foundNoTech(s: ResumeSuggestions | null | undefined): boolean {
+  return !!s && s.targetRoles.length === 0 && s.techStack.length === 0;
+}

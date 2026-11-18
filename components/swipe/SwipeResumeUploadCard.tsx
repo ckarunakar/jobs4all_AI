@@ -9,7 +9,12 @@ import { Label } from "@/components/ui/label";
 import { useSwipeStore } from "@/lib/swipe/swipeStore";
 import { useToast } from "@/components/ui/toast";
 import type { ResumeFileRef } from "@/lib/careerOps/types";
-import { mergeSuggestions, fillToastMessage } from "@/lib/resume/applySuggestions";
+import {
+  mergeSuggestions,
+  fillToastMessage,
+  foundNoTech,
+  NO_TECH_FOUND_MESSAGE,
+} from "@/lib/resume/applySuggestions";
 
 const MAX_BYTES = 5 * 1024 * 1024; // 5 MB
 const ACCEPT = ".pdf,.docx";
@@ -107,14 +112,20 @@ export function SwipeResumeUploadCard() {
       const fillMessage = merged
         ? fillToastMessage(merged.filledRoles, merged.filledTech)
         : null;
-      // Stored-but-unreadable is the failure mode that quietly breaks AI
-      // scoring later, so it gets a warning rather than a clean success.
-      toast(
-        data.textExtracted
-          ? (fillMessage ?? "Resume uploaded")
-          : "Resume stored, but no text could be read from it — AI scoring may not work",
-        data.textExtracted ? "success" : "warning",
-      );
+      if (!data.textExtracted) {
+        // Stored-but-unreadable is the failure mode that quietly breaks AI
+        // scoring later, so it gets a warning rather than a clean success.
+        toast(
+          "Resume stored, but no text could be read from it — AI scoring may not work",
+          "warning",
+        );
+      } else if (foundNoTech(data.suggestions)) {
+        // The AI read it and found nothing tech-related, so the feed won't
+        // narrow on its own; say so instead of a plain success.
+        toast(NO_TECH_FOUND_MESSAGE, "warning");
+      } else {
+        toast(fillMessage ?? "Resume uploaded", "success");
+      }
     } catch {
       toast("Upload failed — check your connection", "danger");
     } finally {
