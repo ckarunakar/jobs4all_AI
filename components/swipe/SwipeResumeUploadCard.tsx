@@ -20,22 +20,32 @@ const ACCEPT = ".pdf,.docx";
  * kept on each ResumeFileRef so the resume can later be read by AI for scoring.
  */
 export function SwipeResumeUploadCard() {
-  const { profile, updateProfile, setUsePreferenceFilters } = useSwipeStore();
+  const { profile, updateProfile, setUsePreferenceFilters, hydrated } =
+    useSwipeStore();
   const { resumes, primaryResumeId } = profile;
   const { toast } = useToast();
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const pendingPrefReloadRef = useRef(false);
+  // Always the latest profile, so a slow upload merges into what the user has
+  // typed since picking the file rather than a stale snapshot.
+  const profileRef = useRef(profile);
+  useEffect(() => {
+    profileRef.current = profile;
+  }, [profile]);
 
   // The store's reload functions read the profile from their render closure, so
   // the feed reload must run one render AFTER updateProfile. setUsePreferenceFilters
   // gets a new identity when the profile changes, which re-fires this effect with
   // the updated profile. A ref (not state) keeps setState out of the effect.
+  // It also waits for the store's first load (hydrated): reloading earlier would
+  // bump the store's request counter and drop that load's response, which
+  // carries tracked jobs and notes.
   useEffect(() => {
-    if (!pendingPrefReloadRef.current) return;
+    if (!hydrated || !pendingPrefReloadRef.current) return;
     pendingPrefReloadRef.current = false;
     setUsePreferenceFilters(true);
-  }, [setUsePreferenceFilters]);
+  }, [setUsePreferenceFilters, hydrated]);
 
   const pickFile = () => inputRef.current?.click();
 
@@ -82,12 +92,13 @@ export function SwipeResumeUploadCard() {
         parsed: false,
         dbId: data.id,
       };
+      const latest = profileRef.current;
       const merged = data.suggestions
-        ? mergeSuggestions(profile, data.suggestions)
+        ? mergeSuggestions(latest, data.suggestions)
         : null;
       updateProfile({
-        resumes: [...resumes, next],
-        primaryResumeId: primaryResumeId ?? next.id,
+        resumes: [...latest.resumes, next],
+        primaryResumeId: latest.primaryResumeId ?? next.id,
         ...merged?.patch,
       });
       if (merged && (merged.filledRoles > 0 || merged.filledTech > 0)) {

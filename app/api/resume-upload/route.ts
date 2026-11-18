@@ -142,7 +142,9 @@ export async function POST(req: Request) {
     // suggestPreferences never throws and can't change ok/status/the stored row.
     const suggestions =
       resumeText && isAiConfigured()
-        ? await suggestPreferences(resumeText, generateCareerOpsJson)
+        ? await suggestPreferences(resumeText, generateCareerOpsJson).catch(
+            () => null,
+          )
         : null;
 
     return NextResponse.json({
