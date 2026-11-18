@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { FileText, Loader2, Plus, Star, Trash2, UploadCloud } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { useSwipeStore } from "@/lib/swipe/swipeStore";
 import { useToast } from "@/components/ui/toast";
 import type { ResumeFileRef } from "@/lib/careerOps/types";
+import { mergeSuggestions, fillToastMessage } from "@/lib/resume/applySuggestions";
 
 const MAX_BYTES = 5 * 1024 * 1024; // 5 MB
 const ACCEPT = ".pdf,.docx";
@@ -19,11 +20,22 @@ const ACCEPT = ".pdf,.docx";
  * kept on each ResumeFileRef so the resume can later be read by AI for scoring.
  */
 export function SwipeResumeUploadCard() {
-  const { profile, updateProfile } = useSwipeStore();
+  const { profile, updateProfile, setUsePreferenceFilters } = useSwipeStore();
   const { resumes, primaryResumeId } = profile;
   const { toast } = useToast();
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
+  const pendingPrefReloadRef = useRef(false);
+
+  // The store's reload functions read the profile from their render closure, so
+  // the feed reload must run one render AFTER updateProfile. setUsePreferenceFilters
+  // gets a new identity when the profile changes, which re-fires this effect with
+  // the updated profile. A ref (not state) keeps setState out of the effect.
+  useEffect(() => {
+    if (!pendingPrefReloadRef.current) return;
+    pendingPrefReloadRef.current = false;
+    setUsePreferenceFilters(true);
+  }, [setUsePreferenceFilters]);
 
   const pickFile = () => inputRef.current?.click();
 
@@ -70,15 +82,25 @@ export function SwipeResumeUploadCard() {
         parsed: false,
         dbId: data.id,
       };
+      const merged = data.suggestions
+        ? mergeSuggestions(profile, data.suggestions)
+        : null;
       updateProfile({
         resumes: [...resumes, next],
         primaryResumeId: primaryResumeId ?? next.id,
+        ...merged?.patch,
       });
+      if (merged && (merged.filledRoles > 0 || merged.filledTech > 0)) {
+        pendingPrefReloadRef.current = true;
+      }
+      const fillMessage = merged
+        ? fillToastMessage(merged.filledRoles, merged.filledTech)
+        : null;
       // Stored-but-unreadable is the failure mode that quietly breaks AI
       // scoring later, so it gets a warning rather than a clean success.
       toast(
         data.textExtracted
-          ? "Resume uploaded"
+          ? (fillMessage ?? "Resume uploaded")
           : "Resume stored, but no text could be read from it — AI scoring may not work",
         data.textExtracted ? "success" : "warning",
       );
@@ -142,7 +164,7 @@ export function SwipeResumeUploadCard() {
           )}
         </div>
         <p className="mt-2 text-sm font-medium">
-          {uploading ? "Uploading…" : "Upload resume (.pdf or .docx)"}
+          {uploading ? "Uploading and reading your résumé…" : "Upload resume (.pdf or .docx)"}
         </p>
         <p className="text-xs text-muted-foreground">
           Stored securely — max 5 MB
