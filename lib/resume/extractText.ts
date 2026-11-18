@@ -35,7 +35,10 @@ export async function extractResumeText(
   if (type === "pdf") {
     const parser = new PDFParse({ data: new Uint8Array(buffer) });
     try {
-      const result = await parser.getText();
+      // pageJoiner "" turns off pdf-parse's default "-- 1 of 1 --" page markers.
+      // Without this, an image-only PDF "extracts" to that marker alone, which
+      // looks like real text and skips the no-text warning.
+      const result = await parser.getText({ pageJoiner: "" });
       return tidy(result.text ?? "");
     } finally {
       await parser.destroy();
