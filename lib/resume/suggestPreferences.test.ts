@@ -53,7 +53,9 @@ test("suggestPreferences returns cleaned suggestions and calls the model as spec
   });
   assert.deepEqual(out, { targetRoles: ["Frontend Developer"], techStack: ["React", "JavaScript"] });
   assert.equal(seen?.temperature, 0.1);
-  assert.equal(seen?.maxTokens, 300);
+  // deepseek-v4-flash reasons before answering and those tokens count toward
+  // maxTokens, so a tight cap truncates the JSON mid-string.
+  assert.equal(seen?.maxTokens, 2000);
   assert.ok(seen?.userPrompt.includes("Built a React app"));
 });
 

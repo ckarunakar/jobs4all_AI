@@ -9,6 +9,10 @@ export type ResumeSuggestions = { targetRoles: string[]; techStack: string[] };
 export const MAX_SUGGESTED_ROLES = 5;
 export const MAX_SUGGESTED_TECH = 3;
 export const SUGGEST_TIMEOUT_MS = 12000;
+// The default model reasons before it answers, and those reasoning tokens count
+// toward this cap. The JSON itself is about 50 tokens, but reasoning on a full
+// résumé often runs past 250, so a tight cap cuts the answer off mid-string.
+export const SUGGEST_MAX_TOKENS = 2000;
 
 const MAX_ROLE_CHARS = 60;
 const MAX_ROLE_WORDS = 4;
@@ -110,7 +114,7 @@ export async function suggestPreferences(
     });
     let raw: string | typeof TIMED_OUT;
     try {
-      const call = callModel({ systemPrompt, userPrompt, temperature: 0.1, maxTokens: 300 });
+      const call = callModel({ systemPrompt, userPrompt, temperature: 0.1, maxTokens: SUGGEST_MAX_TOKENS });
       call.catch(() => {}); // a late rejection after timeout must not go unhandled
       raw = await Promise.race([call, timeout]);
     } catch {

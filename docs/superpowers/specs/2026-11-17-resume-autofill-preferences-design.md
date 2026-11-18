@@ -220,7 +220,9 @@ Server-only.
 - Returns `null` without calling the AI when `isAiConfigured()` is false or the text is
   blank.
 - Otherwise it calls `generateCareerOpsJson` with the prompt, `temperature: 0.1` and
-  `maxTokens: 300`.
+  `maxTokens: 2000`. (It was 300 at first. `deepseek-v4-flash` reasons before it
+  answers and those tokens count toward the cap, so 300 cut the JSON off on real
+  résumés.)
 - It races the call against a **12-second timeout**.
 - It parses, validates and cleans the output, and returns `null` on any error or timeout.
 - It logs one line on failure, with the error kind only: never the résumé text or the
