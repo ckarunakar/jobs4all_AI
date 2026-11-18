@@ -90,7 +90,7 @@ export default function AiToolsPage() {
             icon={FileText}
             tile="linear-gradient(135deg,#3b82f6,#8b5cf6)"
             title="Résumé reader"
-            body="Upload your résumé and fill in your profile: skills, target roles and locations. The AI reads both every time it scores a job for you."
+            body="Upload your résumé and the AI suggests your target roles and skills. Check them, add your locations, and the AI reads both every time it scores a job for you."
             href="/profile"
             linkText="Set Up Profile →"
           >

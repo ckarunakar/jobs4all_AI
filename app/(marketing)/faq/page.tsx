@@ -30,9 +30,11 @@ const faqs: { q: string; a: ReactNode }[] = [
     q: "Who sees my résumé?",
     a: (
       <>
-        To score a job, we send your résumé text, your profile details and the
-        job description to one of our AI scoring providers, Anthropic or
-        DeepSeek. We don’t sell your information or show ads. The{" "}
+        When you upload your résumé, we send its text to one of our AI
+        providers, Anthropic or DeepSeek, to suggest target roles and skills
+        for your profile. To score a job, we send your résumé text, your
+        profile details and the job description to the same providers. We
+        don’t sell your information or show ads. The{" "}
         <Link href="/privacy" className={textLink}>
           privacy policy
         </Link>{" "}

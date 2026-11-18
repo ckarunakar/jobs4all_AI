@@ -10,7 +10,7 @@
 import { LEGAL_H2, LEGAL_P, LEGAL_UL } from "@/components/legal/LegalPage";
 
 export const POLICY_IS_DRAFT = true;
-export const POLICY_LAST_UPDATED = "October 16, 2026";
+export const POLICY_LAST_UPDATED = "November 18, 2026";
 export const CONTACT_EMAIL = "[contact email]";
 const COMPANY_NAME = "[ITJobCafe legal entity name]";
 const JURISDICTION = "[governing jurisdiction]";
@@ -92,6 +92,10 @@ export function PrivacyPolicy() {
         <li>To show you job listings and filter them to your preferences.</li>
         <li>To keep track of the jobs you have saved, skipped or applied to.</li>
         <li>To score how well your resume fits a job, when you ask for it.</li>
+        <li>
+          To suggest target roles and technologies for your profile from your
+          resume, when you upload it.
+        </li>
         <li>To keep you signed in, and to answer you when you contact us.</li>
       </ul>
       <p className={LEGAL_P}>
@@ -109,6 +113,13 @@ export function PrivacyPolicy() {
           graduation date, work authorization, skills, and target roles and
           locations. The provider returns the score and processes the data
           under its own terms.
+        </li>
+        <li>
+          When you upload a resume, we also send its text (including any
+          contact details written in it) to one of these providers to suggest
+          target roles and technologies for your profile. The provider returns
+          only those suggestions; we save them to your profile, where you can
+          change them.
         </li>
         <li>
           <strong>Our hosting provider,</strong> which runs the servers and

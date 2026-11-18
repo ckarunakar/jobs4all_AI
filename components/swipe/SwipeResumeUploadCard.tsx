@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { FileText, Loader2, Plus, Star, Trash2, UploadCloud } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -9,6 +9,12 @@ import { Label } from "@/components/ui/label";
 import { useSwipeStore } from "@/lib/swipe/swipeStore";
 import { useToast } from "@/components/ui/toast";
 import type { ResumeFileRef } from "@/lib/careerOps/types";
+import {
+  mergeSuggestions,
+  fillToastMessage,
+  foundNoTech,
+  NO_TECH_FOUND_MESSAGE,
+} from "@/lib/resume/applySuggestions";
 
 const MAX_BYTES = 5 * 1024 * 1024; // 5 MB
 const ACCEPT = ".pdf,.docx";
@@ -19,11 +25,32 @@ const ACCEPT = ".pdf,.docx";
  * kept on each ResumeFileRef so the resume can later be read by AI for scoring.
  */
 export function SwipeResumeUploadCard() {
-  const { profile, updateProfile } = useSwipeStore();
+  const { profile, updateProfile, setUsePreferenceFilters, hydrated } =
+    useSwipeStore();
   const { resumes, primaryResumeId } = profile;
   const { toast } = useToast();
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
+  const pendingPrefReloadRef = useRef(false);
+  // Always the latest profile, so a slow upload merges into what the user has
+  // typed since picking the file rather than a stale snapshot.
+  const profileRef = useRef(profile);
+  useEffect(() => {
+    profileRef.current = profile;
+  }, [profile]);
+
+  // The store's reload functions read the profile from their render closure, so
+  // the feed reload must run one render AFTER updateProfile. setUsePreferenceFilters
+  // gets a new identity when the profile changes, which re-fires this effect with
+  // the updated profile. A ref (not state) keeps setState out of the effect.
+  // It also waits for the store's first load (hydrated): reloading earlier would
+  // bump the store's request counter and drop that load's response, which
+  // carries tracked jobs and notes.
+  useEffect(() => {
+    if (!hydrated || !pendingPrefReloadRef.current) return;
+    pendingPrefReloadRef.current = false;
+    setUsePreferenceFilters(true);
+  }, [setUsePreferenceFilters, hydrated]);
 
   const pickFile = () => inputRef.current?.click();
 
@@ -70,18 +97,35 @@ export function SwipeResumeUploadCard() {
         parsed: false,
         dbId: data.id,
       };
+      const latest = profileRef.current;
+      const merged = data.suggestions
+        ? mergeSuggestions(latest, data.suggestions)
+        : null;
       updateProfile({
-        resumes: [...resumes, next],
-        primaryResumeId: primaryResumeId ?? next.id,
+        resumes: [...latest.resumes, next],
+        primaryResumeId: latest.primaryResumeId ?? next.id,
+        ...merged?.patch,
       });
-      // Stored-but-unreadable is the failure mode that quietly breaks AI
-      // scoring later, so it gets a warning rather than a clean success.
-      toast(
-        data.textExtracted
-          ? "Resume uploaded"
-          : "Resume stored, but no text could be read from it — AI scoring may not work",
-        data.textExtracted ? "success" : "warning",
-      );
+      if (merged && (merged.filledRoles > 0 || merged.filledTech > 0)) {
+        pendingPrefReloadRef.current = true;
+      }
+      const fillMessage = merged
+        ? fillToastMessage(merged.filledRoles, merged.filledTech)
+        : null;
+      if (!data.textExtracted) {
+        // Stored-but-unreadable is the failure mode that quietly breaks AI
+        // scoring later, so it gets a warning rather than a clean success.
+        toast(
+          "Resume stored, but no text could be read from it — AI scoring may not work",
+          "warning",
+        );
+      } else if (foundNoTech(data.suggestions)) {
+        // The AI read it and found nothing tech-related, so the feed won't
+        // narrow on its own; say so instead of a plain success.
+        toast(NO_TECH_FOUND_MESSAGE, "warning");
+      } else {
+        toast(fillMessage ?? "Resume uploaded", "success");
+      }
     } catch {
       toast("Upload failed — check your connection", "danger");
     } finally {
@@ -142,7 +186,7 @@ export function SwipeResumeUploadCard() {
           )}
         </div>
         <p className="mt-2 text-sm font-medium">
-          {uploading ? "Uploading…" : "Upload resume (.pdf or .docx)"}
+          {uploading ? "Uploading and reading your résumé…" : "Upload resume (.pdf or .docx)"}
         </p>
         <p className="text-xs text-muted-foreground">
           Stored securely — max 5 MB

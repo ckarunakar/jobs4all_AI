@@ -17,6 +17,8 @@
 import { NextResponse } from "next/server";
 import { getRequestUser } from "@/lib/auth/requestUser";
 import { getPool, sql } from "@/lib/db/sqlServer";
+import { isAiConfigured, generateCareerOpsJson } from "@/lib/ai/modelClient";
+import { suggestPreferences } from "@/lib/resume/suggestPreferences";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -135,6 +137,16 @@ export async function POST(req: Request) {
       );
 
     const id = result.recordset?.[0]?.ID as number | undefined;
+
+    // Best-effort preference suggestions. Runs only after a successful insert;
+    // suggestPreferences never throws and can't change ok/status/the stored row.
+    const suggestions =
+      resumeText && isAiConfigured()
+        ? await suggestPreferences(resumeText, generateCareerOpsJson).catch(
+            () => null,
+          )
+        : null;
+
     return NextResponse.json({
       ok: true,
       id,
@@ -143,6 +155,7 @@ export async function POST(req: Request) {
       size: file.size,
       textExtracted: Boolean(resumeText),
       textWarning,
+      suggestions,
     });
   } catch (err) {
     // Log id/message only — never the file bytes, email, or credentials.
