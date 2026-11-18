@@ -37,6 +37,8 @@ const STALE = [
   "AI scores each tech job",
   "Your scores get sharper",
   "No. You can browse",
+  "fill in your profile: skills, target roles and locations",
+  "add a PDF or .docx and fill in your job preferences",
 ];
 
 test("no stale demo copy or overclaims anywhere on the public pages", () => {
@@ -73,7 +75,7 @@ test("AI Tools carries the corrected copy and reads tiers from SCORE_BANDS", () 
   const s = source("app/(marketing)/ai-tools");
   for (const t of [
     "Four tools work together to find the jobs worth your time. Here is what each one does, and what it never does.",
-    "Upload your résumé and fill in your profile: skills, target roles and locations. The AI reads both every time it scores a job for you.",
+    "Upload your résumé and the AI suggests your target roles and skills. Check them, add your locations, and the AI reads both every time it scores a job for you.",
     "Once your résumé is uploaded, ask the AI to score a job, or the next 10 at once. 4.0 and up is worth applying; 4.5 and up is an excellent fit.",
     "Narrow the feed by skills, city, job type and date posted, or let your profile preferences filter for you. Then filter your applications by fit.",
     "The AI scores and explains. You decide.",
@@ -92,7 +94,7 @@ test("How It Works carries the corrected copy and reads the scale from SCORE_BAN
   const s = source("app/(marketing)/how-it-works", "components/marketing/ScoreScale.tsx");
   for (const t of [
     "No account needed to start: browse and swipe as a guest. Sign up and add your résumé to see your fit scores.",
-    "Create an account, add a PDF or .docx and fill in your job preferences.",
+    "Create an account and add a PDF or .docx. The AI suggests your target roles and skills from it; check them and add your locations. That’s your career profile.",
     "Ask the AI to score a job, or the next 10 at once. Each gets a 1.0–5.0 score with the reasons behind it.",
     "Start swiping now as a guest. Sign up and add your résumé to see your fit scores.",
     "4.0 is where we recommend applying.", "SCORE_BANDS"])
@@ -104,6 +106,7 @@ test("FAQ carries the corrected copy", () => {
   const s = source("app/(marketing)/faq");
   for (const t of [
     "Not to look around: you can browse and swipe as a guest. To see fit scores, create an account and upload your résumé.",
+    "When you upload your résumé, we send its text to one of our AI providers, Anthropic or DeepSeek, to suggest target roles and skills for your profile.",
     "PDF or Word (.docx), up to 5 MB.", "Anthropic or DeepSeek", "Android and iPhone apps are on the way.",
     "Go to Settings and choose Delete account, then confirm.", "Still have a question?", "/support", "/privacy"])
     assert.ok(s.includes(t), `missing: ${t}`);

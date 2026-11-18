@@ -10,7 +10,7 @@ const steps = [
   {
     tile: "linear-gradient(135deg,#3b82f6,#8b5cf6)",
     title: "Upload your résumé",
-    body: "Create an account, add a PDF or .docx and fill in your job preferences. That’s your career profile.",
+    body: "Create an account and add a PDF or .docx. The AI suggests your target roles and skills from it; check them and add your locations. That’s your career profile.",
   },
   {
     tile: "linear-gradient(135deg,#5a74e2,#ae4fca)",
